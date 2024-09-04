@@ -1,1 +1,4 @@
 /Coin.generated.sln
+bin/
+obj/
+
