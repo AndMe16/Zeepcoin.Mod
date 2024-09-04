@@ -11,7 +11,7 @@ using ZeepSDK.Racing;
 using ZeepSDK.Storage;
 using System.Collections.Generic;
 using BepInEx.Configuration;
-using ZeepSDK.PhotoMode;
+
 
 
 namespace Coin;
@@ -44,7 +44,7 @@ public class Plugin : BaseUnityPlugin
     private Dictionary<ulong, (string username, string commandType, int totalPointsSent)> userVotes = new Dictionary<ulong, (string, string, int)>();
     private Dictionary<ulong, int > totalPointsDataDictionary = new Dictionary<ulong, int>();
     private List<ulong> voteOrder = new List<ulong>();
-    private List<string> rowTexts = new List<string> {"","","","",""}; 
+    private List<string> rowTexts = new List<string> {"<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>"}; 
     private List<ulong> rowPlayerIds = new List<ulong> {0,0,0,0,0};
     private int totalTailsPoints = 0;
     private int totalHeadsPoints = 0;
@@ -209,7 +209,7 @@ public class Plugin : BaseUnityPlugin
         void UpdateCountdown()
         {
             TimeSpan timeLeft = TimeSpan.FromSeconds(countdownLeft);
-            serverMessage = $"/servermessage white 2 <size=160%><voffset=-2em><align=\"left\"><line-height=0%><pos=5em>Prediction time left: <#F0F071>{timeLeft.ToString(@"hh\:mm\:ss")}"
+            serverMessage = $"/servermessage white 2 <size=+7><voffset=-9em><align=\"left\"><line-height=0%><pos=3em>Prediction time left: <#F0F071>{timeLeft.ToString(@"hh\:mm\:ss")}"
                                 +predictionBar;
             ChatApi.SendMessage(serverMessage);
             countdownLeft--;
@@ -218,20 +218,21 @@ public class Plugin : BaseUnityPlugin
         void UpdatePredictionBar(){
             Logger.LogInfo("Updating servermessage PredictionBar");
             DefineLinesBar();
-            predictionBar= ((heads_voters!=0||tails_voters!=0)?$"<voffset=-1em><pos=25em><#FFFFFF> <u><alpha=#00>|<pos=33em><pos=50em>|</u>":"") 
-                          +$"<br><voffset=-2em><line-height=90%><pos=5em><#FFFFFF><u><alpha=#00>|<pos=22.5em>|</u>" //Stats
-                          +((heads_voters!=0||tails_voters!=0)? $"<pos=25em><#FFFFFF> <u>|<#F0F071>User <pos=33em><#FFFFFF>|<#F0F071>Side <pos=37em><#FFFFFF>|<#F0F071>Sent<pos=43em><#FFFFFF>|<#F0F071>Remaining<pos=50em><#FFFFFF>|</u>" : "") //Voters
-                          +$"<br><line-height=90%><pos=1em><#FFFFFF><u><alpha=#00>|<pos=5em><#FFFFFF>|<#21B2ED>Heads <pos=10em>{heads_lines}<#F0F071>|<#FD4F06>{tails_lines} <pos=18em>Tails<pos=22.5em><#FFFFFF>|</u>" //Stats
+            predictionBar= $"<br><line-height=90%><pos=5em><#FFFFFF><u><alpha=#00>|<pos=22.5em>|</u>" //Stats
+                          +$"<br><line-height=90%><#FFFFFF><u><alpha=#00>|<pos=5em><#FFFFFF>|<#21B2ED>Heads <pos=10em>{heads_lines}<#F0F071>|<#FD4F06>{tails_lines} <pos=18em>Tails<pos=22.5em><#FFFFFF>|</u>" //Stats                        
+                          +$"<br><line-height=90%><#FFFFFF><u>|Voters<pos=5em>|<#21B2ED>{heads_voters} <pos=10em>{heads_lines}<#F0F071>|<#FD4F06>{tails_lines} <pos=18em>{tails_voters}<pos=22.5em><#FFFFFF>|</u>"                         
+                          +$"<br><line-height=90%><#FFFFFF><u>|Points<pos=5em>|<#21B2ED>{totalHeadsPoints} <pos=10em>{heads_lines}<#F0F071>|<#FD4F06>{tails_lines} <pos=18em>{totalTailsPoints}<pos=22.5em><#FFFFFF>|</u>"                          
+                          +$"<br><line-height=90%><#FFFFFF><u>|Ratio<pos=5em>|<#21B2ED>{heads_ratio_str} <pos=10em>{heads_lines}<#F0F071>|<#FD4F06>{tails_lines} <pos=18em>{tails_ratio_str}<pos=22.5em><#FFFFFF>|</u>"                  
+                          +$"<br><line-height=90%>Vote using <#21B2ED>!heads <#F0F071><points> <#FFFFFF>or <#FD4F06>!tails <#F0F071><points>"
+                          +$"<br><#FFFFFF>Use <#F0F071>!check_points <#FFFFFF>to check your remaining points"
+                          +$"<br>Recharging <#F0F071>{configPointsRechargePoints.Value} points <#FFFFFF>every <#F0F071>{configPointsRechargeInterval.Value} seconds"
+                          +((heads_voters!=0||tails_voters!=0)?$"<br><line-height=90%><#FFFFFF><u><alpha=#00>|<pos=8em><pos=25em>|</u>":"<br><line-height=90%>") 
+                          +((heads_voters!=0||tails_voters!=0)? $"<br><line-height=90%><#FFFFFF><u>|<#F0F071>User <pos=8em><#FFFFFF>|<#F0F071>Side <pos=12em><#FFFFFF>|<#F0F071>Sent<pos=18em><#FFFFFF>|<#F0F071>Remaining<pos=25em><#FFFFFF>|</u>" : "<br><line-height=90%>") //Voters
                           +rowTexts[0] //Voters
-                          +$"<br><line-height=90%><pos=1em><#FFFFFF><u>|Voters<pos=5em>|<#21B2ED>{heads_voters} <pos=10em>{heads_lines}<#F0F071>|<#FD4F06>{tails_lines} <pos=18em>{tails_voters}<pos=22.5em><#FFFFFF>|</u>"
                           +rowTexts[1] //Voters
-                          +$"<br><line-height=90%><pos=1em><#FFFFFF><u>|Points<pos=5em>|<#21B2ED>{totalHeadsPoints} <pos=10em>{heads_lines}<#F0F071>|<#FD4F06>{tails_lines} <pos=18em>{totalTailsPoints}<pos=22.5em><#FFFFFF>|</u>"
                           +rowTexts[2] //Voters
-                          +$"<br><line-height=90%><pos=1em><#FFFFFF><u>|Ratio<pos=5em>|<#21B2ED>{heads_ratio_str} <pos=10em>{heads_lines}<#F0F071>|<#FD4F06>{tails_lines} <pos=18em>{tails_ratio_str}<pos=22.5em><#FFFFFF>|</u>"
-                          +rowTexts[3] //Voters
-                          +$"<br><size=150%><line-height=90%><pos=1em>Vote using <#21B2ED>!heads <#F0F071><points> <#FFFFFF>or <#FD4F06>!tails <#F0F071><points>"
-                          +$"<br><pos=1em><#FFFFFF>Use <#F0F071>!check_points <#FFFFFF>to check your remaining points"
-                          +$"<br><pos=1em>Recharging <#F0F071>{configPointsRechargePoints.Value} points <#FFFFFF>every <#F0F071>{configPointsRechargeInterval.Value} seconds";
+                          +rowTexts[3]; //Voters
+                          
         }
 
 
@@ -285,7 +286,7 @@ public class Plugin : BaseUnityPlugin
             int totalPointsRemaining = totalPointsDataDictionary[playerId];
 
             if(rowPlayerIds[0] ==playerId){
-                rowTexts[0] = $"<pos=25em><#FFFFFF> <u>|{truncatedUsername}<pos=33em>|{(vote.commandType== "heads" ? "<#21B2ED>":"<#FD4F06>")}{vote.commandType}<#FFFFFF><pos=37em>|{vote.totalPointsSent}<pos=43em>|{totalPointsRemaining}<pos=50em>|</u>";
+                rowTexts[0] = $"<br><line-height=90%><#FFFFFF><u>|{truncatedUsername}<pos=8em>|{(vote.commandType== "heads" ? "<#21B2ED>":"<#FD4F06>")}{vote.commandType}<#FFFFFF><pos=12em>|{vote.totalPointsSent}<pos=18em>|{totalPointsRemaining}<pos=25em>|</u>";
                 rowPlayerIds[0] = playerId; // Update the player ID for the top row
                 return;
             }
@@ -349,7 +350,7 @@ public class Plugin : BaseUnityPlugin
             coinPaused = false;
             userVotes = new Dictionary<ulong, (string, string, int)>();
             voteOrder = new List<ulong>();
-            rowTexts = new List<string> {"","","","",""};
+            rowTexts = new List<string> {"<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>"}; 
             rowPlayerIds = new List<ulong> {0,0,0,0,0};
             totalTailsPoints = 0;
             totalHeadsPoints = 0;
@@ -375,7 +376,7 @@ public class Plugin : BaseUnityPlugin
                 countdownTimer?.Dispose(); 
                 userVotes = new Dictionary<ulong, (string, string, int)>();
                 voteOrder = new List<ulong>();
-                rowTexts = new List<string> {"","","","",""};
+                rowTexts = new List<string> {"<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>"}; 
                 rowPlayerIds = new List<ulong> {0,0,0,0,0};
                 totalTailsPoints = 0;
                 totalHeadsPoints = 0;
@@ -400,7 +401,7 @@ public class Plugin : BaseUnityPlugin
                 countdownTimer?.Dispose(); 
                 userVotes = new Dictionary<ulong, (string, string, int)>();
                 voteOrder = new List<ulong>();
-                rowTexts = new List<string> {"","","","",""};
+                rowTexts = new List<string> {"<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>"}; 
                 rowPlayerIds = new List<ulong> {0,0,0,0,0};
                 totalTailsPoints = 0;
                 totalHeadsPoints = 0;
