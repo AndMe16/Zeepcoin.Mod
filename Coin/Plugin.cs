@@ -23,7 +23,8 @@ public class Plugin : BaseUnityPlugin
 {   
     private Harmony harmony;
     private ConfigEntry<int> configPointsRechargeInterval;
-    private ConfigEntry<int> configPointsRechargePoints; 
+    private ConfigEntry<int> configPointsRechargePoints;
+    private ConfigEntry<bool> configUseServer; 
 
     private void Awake()
     {
@@ -72,7 +73,11 @@ public class Plugin : BaseUnityPlugin
         configPointsRechargePoints = Config.Bind("Points Recharge",    
                                          "Points added per recharge", 
                                          10, 
-                                         new ConfigDescription("Min.5 Max. 100 Amount of points that will be added per recharge for each player", new AcceptableValueRange<int>(5, 100))); 
+                                         new ConfigDescription("Min.5 Max. 100 Amount of points that will be added per recharge for each player", new AcceptableValueRange<int>(5, 100)));
+        configUseServer = Config.Bind("Server",
+                                        "Use server storage",
+                                        false,
+                                        "Use centralized server to save the remaining points of each player. If false they will be saved in a local file");
     }
     private void CoinFlow()
     {
@@ -307,7 +312,7 @@ public class Plugin : BaseUnityPlugin
                 
             }
             
-            rowTexts[0] = $"<pos=25em><#FFFFFF> <u>|{truncatedUsername}<pos=33em>|{(vote.commandType== "heads" ? "<#21B2ED>":"<#FD4F06>")}{vote.commandType}<#FFFFFF><pos=37em>|{vote.totalPointsSent}<pos=43em>|{totalPointsRemaining}<pos=50em>|</u>";
+            rowTexts[0] = $"<br><line-height=90%><#FFFFFF><u>|{truncatedUsername}<pos=8em>|{(vote.commandType== "heads" ? "<#21B2ED>":"<#FD4F06>")}{vote.commandType}<#FFFFFF><pos=12em>|{vote.totalPointsSent}<pos=18em>|{totalPointsRemaining}<pos=25em>|</u>";
             rowPlayerIds[0] = playerId; // Update the player ID for the top row
         }
 
@@ -322,8 +327,7 @@ public class Plugin : BaseUnityPlugin
 
         void EndPrediction()
         {
-            countdownTimer?.Stop();
-            countdownTimer?.Dispose();
+            
             if(!ZeepkistNetwork.LocalPlayerHasHostPowers()){
                 ChatApi.AddLocalMessage("You lost host during the prediction! Prediction stoped.");
                 ChatApi.SendMessage($"{SteamClient.Name} lost host during the prediction! All the points will be refunded");
@@ -344,18 +348,7 @@ public class Plugin : BaseUnityPlugin
                 Pay(result);
             }
             
-            
-            coinStarted = false;
-            countdownLeft = 0;
-            coinPaused = false;
-            userVotes = new Dictionary<ulong, (string, string, int)>();
-            voteOrder = new List<ulong>();
-            rowTexts = new List<string> {"<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>"}; 
-            rowPlayerIds = new List<ulong> {0,0,0,0,0};
-            totalTailsPoints = 0;
-            totalHeadsPoints = 0;
-            heads_voters = 0;
-            tails_voters = 0;
+            ClearVars();
         }
 
         void NotifyNotHost()
@@ -370,18 +363,7 @@ public class Plugin : BaseUnityPlugin
             if (coinStarted)
             {
                 RefundPoints();
-                coinStarted = false;
-                countdownLeft = 0;
-                coinPaused = false;
-                countdownTimer?.Dispose(); 
-                userVotes = new Dictionary<ulong, (string, string, int)>();
-                voteOrder = new List<ulong>();
-                rowTexts = new List<string> {"<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>"}; 
-                rowPlayerIds = new List<ulong> {0,0,0,0,0};
-                totalTailsPoints = 0;
-                totalHeadsPoints = 0;
-                heads_voters = 0;
-                tails_voters = 0;
+                ClearVars();
                 
             }
             
@@ -396,17 +378,7 @@ public class Plugin : BaseUnityPlugin
             {
                 Logger.LogMessage("Stoping ongoing prediction");
                 RefundPoints();
-                coinStarted = false;
-                countdownLeft = 0;
-                countdownTimer?.Dispose(); 
-                userVotes = new Dictionary<ulong, (string, string, int)>();
-                voteOrder = new List<ulong>();
-                rowTexts = new List<string> {"<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>"}; 
-                rowPlayerIds = new List<ulong> {0,0,0,0,0};
-                totalTailsPoints = 0;
-                totalHeadsPoints = 0;
-                heads_voters = 0;
-                tails_voters = 0;
+                ClearVars();
                 ChatApi.SendMessage($"{SteamClient.Name} canceled the prediction. All the points will be refunded");
                 ChatApi.SendMessage($"/servermessage white 20 Bad Host!");
             }
@@ -431,6 +403,7 @@ public class Plugin : BaseUnityPlugin
             string username ="";
             if(isLocal){
                 username = SteamClient.Name;
+                playerId = SteamClient.SteamId;
             } 
             else{
                 foreach (var player in playerList)
@@ -463,6 +436,9 @@ public class Plugin : BaseUnityPlugin
 
         void OnCheckPointsCommand(bool isLocal, ulong playerId, string arguments){
             if (!ZeepkistNetwork.LocalPlayerHasHostPowers()) return;
+            if(isLocal){
+                playerId = SteamClient.SteamId;
+            } 
             List<ZeepkistNetworkPlayer> playerList = ZeepkistNetwork.PlayerList;
             string username ="";
             foreach (var player in playerList)
@@ -558,36 +534,6 @@ public class Plugin : BaseUnityPlugin
             // Return a default value if the user is not found
             return 1000;
         }
-
-
-        // bool IsValidCommand(string input, out string commandType, out int number)
-        // {
-        //     string pattern = @"^<noparse>!(tails|heads)\s*(.*?)</noparse>$";
-        //     Match match = Regex.Match(input, pattern);
-        //     if (match.Success)
-        //     {
-        //         string argument = match.Groups[2].Value;
-        //         int.TryParse(argument, out number);
-        //         commandType = match.Groups[1].Value;
-        //         return true;
-        //     }
-        //     else
-        //     {
-        //         commandType = null;
-        //         number = 0;
-        //         return false;
-        //     }
-        // }
-
-        // bool IsCurrentPointsCommand(string input){
-        //     string pattern = @"^<noparse>!(check_points)</noparse>$";
-        //     Match match = Regex.Match(input, pattern);
-        //     if (match.Success)
-        //     {
-        //         return true;
-        //     }
-        //     return false;
-        // }
 
         void OnRoundStarted()
         {
@@ -716,52 +662,71 @@ public class Plugin : BaseUnityPlugin
         }
 
         void OnRefundCommand(string argument){
-            if(ZeepkistNetwork.LocalPlayerHasHostPowers()){
-                string[] arguments = argument.Split(" ");
-                if(arguments.Length > 1){
-                    string points_str = arguments[0];
-                    string username = arguments[1];
-                    if (int.TryParse(points_str, out int points) && points >0){
-                        List<ZeepkistNetworkPlayer> playerList = ZeepkistNetwork.PlayerList;
-                        List<ulong> playerIDs = new List<ulong>();
-                        foreach (var player in playerList)
-                        {
-                            if (player.Username==username){
-                                playerIDs.Add(player.SteamID);
-                            }
-                        }
-                        if (playerIDs.Count == 0)
-                        {
-                            ChatApi.AddLocalMessage($"No players found with username {username}. Ensure the player is in the lobby.");
-                        }
-                        else{
-                            foreach (var playerID in playerIDs)
-                            {
-                                if (totalPointsDataDictionary.ContainsKey(playerID))
-                                {
-                                    totalPointsDataDictionary[playerID] = totalPointsDataDictionary[playerID] + points;
-                                    ChatApi.AddLocalMessage($"Refunding {points} to {username} with SteamID {playerID}");
-                                }
-                                else{
-                                    ChatApi.AddLocalMessage($"{username} with SteamID {playerID} has never participated in a coin prediction!");
-                                }
-
-                            }
-                        }
+            if(!ZeepkistNetwork.LocalPlayerHasHostPowers()){
+                ChatApi.AddLocalMessage("You are not host!");
+                return;
+            }
+       
+            string[] arguments = argument.Split(" ");
+            if(arguments.Length <= 1){
+                ChatApi.AddLocalMessage("You are missing arguments. /coin_refund <points> <username>");
+                return;
+            }
+            
+            string points_str = arguments[0];
+            string username = arguments[1];
+            if(!(int.TryParse(points_str, out int points) && points >0)){
+                ChatApi.AddLocalMessage("Please use a valid amount of points. /coin_refund <points> <username>");
+                return;
+            }
+            
+            List<ZeepkistNetworkPlayer> playerList = ZeepkistNetwork.PlayerList;
+            List<ulong> playerIDs = new List<ulong>();
+            foreach (var player in playerList)
+            {
+                if (player.Username==username){
+                    playerIDs.Add(player.SteamID);
+                }
+            }
+            if (playerIDs.Count == 0)
+            {
+                ChatApi.AddLocalMessage($"No players found with username {username}. Ensure the player is in the lobby.");
+            }
+            else{
+                foreach (var playerID in playerIDs)
+                {
+                    if (totalPointsDataDictionary.ContainsKey(playerID))
+                    {
+                        totalPointsDataDictionary[playerID] = totalPointsDataDictionary[playerID] + points;
+                        ChatApi.AddLocalMessage($"Refunding {points} to {username} with SteamID {playerID}");
                     }
                     else{
-                        ChatApi.AddLocalMessage("Please use a valid amount of points. /coin_refund <points> <username>");
+                        ChatApi.AddLocalMessage($"{username} with SteamID {playerID} has never participated in a coin prediction!");
                     }
+
                 }
-                else {
-                    ChatApi.AddLocalMessage("You are missing arguments. /coin_refund <points> <username>");
-                }
-            }else{
-                ChatApi.AddLocalMessage("You are not host!");
             }
             
         }
+
+        void ClearVars(){
+            coinStarted = false;
+            countdownLeft = 0;
+            coinPaused = false;
+            countdownTimer?.Stop();
+            countdownTimer?.Dispose(); 
+            userVotes = new Dictionary<ulong, (string, string, int)>();
+            voteOrder = new List<ulong>();
+            rowTexts = new List<string> {"<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>","<br><line-height=90%>"}; 
+            rowPlayerIds = new List<ulong> {0,0,0,0,0};
+            totalTailsPoints = 0;
+            totalHeadsPoints = 0;
+            heads_voters = 0;
+            tails_voters = 0;
+        }
     }
+
+
 
     private void OnDestroy()
     {
