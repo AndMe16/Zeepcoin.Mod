@@ -11,6 +11,10 @@ using ZeepSDK.Racing;
 using ZeepSDK.Storage;
 using System.Collections.Generic;
 using BepInEx.Configuration;
+using System.Collections;
+using Newtonsoft.Json;
+using UnityEngine.Networking;
+using ZeepSDK.Messaging;
 
 
 
@@ -25,6 +29,11 @@ public class Plugin : BaseUnityPlugin
     private ConfigEntry<int> configPointsRechargeInterval;
     private ConfigEntry<int> configPointsRechargePoints;
     private ConfigEntry<bool> configUseServer; 
+    
+    private event EventHandler<SettingChangedEventArgs> OnSettingChanged;
+    
+
+    private string baseUrl = "https://zeep-coin.onrender.com"; 
 
     private void Awake()
     {
@@ -62,10 +71,12 @@ public class Plugin : BaseUnityPlugin
     private Timer asignPointsTimer;
     private bool pointsPaused = false;
     private string serverMessage;
+    private bool usingLocal=true;
 
    
                                     
     private void Configuration_Init(){
+        
         configPointsRechargeInterval = Config.Bind("Points Recharge",    
                                          "Time interval (sec)", 
                                          120, 
@@ -78,6 +89,8 @@ public class Plugin : BaseUnityPlugin
                                         "Use server storage",
                                         false,
                                         "Use centralized server to save the remaining points of each player. If false they will be saved in a local file");
+        configPointsRechargeInterval.SettingChanged += SettingChangedHandler;
+        configUseServer.SettingChanged += SettingChangedHandler;
     }
     private void CoinFlow()
     {
@@ -131,6 +144,9 @@ public class Plugin : BaseUnityPlugin
             RacingApi.LevelLoaded += OnRoundStarted;
             RacingApi.RoundEnded += OnRoundEnded;
             MultiplayerApi.JoinedRoom += OnJoinedRoom;
+            OnSettingChanged += OnSettingsChanged;
+            // Subscribe to the MasterChanged event
+            ZeepkistNetwork.MasterChanged += OnMasterChanged;
             
         }
 
@@ -577,7 +593,7 @@ public class Plugin : BaseUnityPlugin
             {
                 totalPointsDataDictionary[entry.Key] = totalPointsDataDictionary[entry.Key] + entry.Value.totalPointsSent;
             }
-            modStorage.SaveToJson("LocalPlayersPoints", totalPointsDataDictionary);
+            SaveAllData();
             
         }
 
@@ -604,22 +620,21 @@ public class Plugin : BaseUnityPlugin
                     totalPointsDataDictionary[entry.Key] += addedPointsRounded;
                 }
             }
-            modStorage.SaveToJson("LocalPlayersPoints", totalPointsDataDictionary);
+            SaveAllData();
         }
 
 
         void OnJoinedRoom(){
             Logger.LogMessage("Joining Room");
-            startAsignPointsTimer();
-                if (modStorage.JsonFileExists("LocalPlayersPoints")){
-                    totalPointsDataDictionary = modStorage.LoadFromJson<Dictionary<ulong, int >>("LocalPlayersPoints");
-                    Logger.LogInfo($"Loading points from local file LocalPlayersPoints.json");
+            if(ZeepkistNetwork.LocalPlayerHasHostPowers()){
+                startAsignPointsTimer();
+                LoadAllData();
+                if(configUseServer.Value){
+                    StartCoroutine(PingServer());
                 }
-                else{
-                    Logger.LogInfo($"Did not found local file LocalPlayersPoints.json");
-                }
+            }
             
-
+            
         }
 
         void startAsignPointsTimer ()
@@ -724,8 +739,168 @@ public class Plugin : BaseUnityPlugin
             heads_voters = 0;
             tails_voters = 0;
         }
+
+        void SaveAllData(){
+        if(configUseServer.Value){
+                if(!usingLocal){
+                    StartCoroutine(Save_Data_Server(totalPointsDataDictionary));
+                    return;
+                }
+        }
+        modStorage.SaveToJson("LocalPlayersPoints", totalPointsDataDictionary);
+        }
+
+        void LoadAllData(){
+            if (configUseServer.Value){
+                StartCoroutine(Load_Data_Server((loadedData) =>
+                {
+                    totalPointsDataDictionary = loadedData;
+                    usingLocal = false;
+                }));
+                if (totalPointsDataDictionary.Count == 0){
+                    ChatApi.AddLocalMessage("Unable to load the points from the server, using local file!");
+                    Logger.LogInfo($"Unable to load the points from the server, using local file");
+                    usingLocal = true;
+                    if (modStorage.JsonFileExists("LocalPlayersPoints")){
+                        totalPointsDataDictionary = modStorage.LoadFromJson<Dictionary<ulong, int >>("LocalPlayersPoints");
+                    }
+                    else{
+                        Logger.LogInfo($"Did not found local file LocalPlayersPoints.json");
+                    }
+                }
+            }
+            else{
+                if (modStorage.JsonFileExists("LocalPlayersPoints"))
+                {
+                    totalPointsDataDictionary = modStorage.LoadFromJson<Dictionary<ulong, int >>("LocalPlayersPoints");
+                    Logger.LogInfo($"Loading points from local file LocalPlayersPoints.json");
+                }
+                else{
+                    Logger.LogInfo($"Did not found local file LocalPlayersPoints.json");
+                }
+            }
+        }
+
+        void OnSettingsChanged(object sender, SettingChangedEventArgs e)
+        {
+            Logger.LogInfo($"Setting changed: {e.ChangedSetting.Definition.Key}");
+            if((e.ChangedSetting == configPointsRechargeInterval) && MultiplayerApi.IsPlayingOnline ){
+                stopAsignPointsTimer();
+                startAsignPointsTimer();
+            }
+            else if((e.ChangedSetting == configUseServer)&&MultiplayerApi.IsPlayingOnline){
+                StartCoroutine(PingServer());
+            } 
+        }
+        void OnMasterChanged(ZeepkistNetworkPlayer player)
+        {
+            Logger.LogInfo($"The new master of the lobby is: {player.Username}");
+            if(player.IsLocal){
+                startAsignPointsTimer();
+                LoadAllData();
+                if(configUseServer.Value){
+                    StartCoroutine(PingServer());
+                }
+            }
+        }
+            
     }
 
+  
+
+
+    IEnumerator Load_Data_Server(System.Action<Dictionary<ulong, int>> onSuccess)
+        {
+            Logger.LogMessage($"Loading data from server");
+            string url = $"{baseUrl}/points/all"; 
+
+            using (UnityWebRequest request = UnityWebRequest.Get(url))
+            {
+                yield return request.SendWebRequest();
+
+                if (request.result == UnityWebRequest.Result.Success)
+                {
+                    string jsonResponse = request.downloadHandler.text;
+                    Dictionary<ulong, int> totalPointsDataDictionary = JsonConvert.DeserializeObject<Dictionary<ulong, int>>(jsonResponse);
+                    Logger.LogInfo($"Data loaded from server:");
+                    foreach (var kvp in totalPointsDataDictionary)    
+                    {
+                        Logger.LogInfo($"Player ID: {kvp.Key}, Points: {kvp.Value}");
+                    }
+                    
+                    onSuccess(totalPointsDataDictionary);
+                }
+                else
+                {
+                    Logger.LogError($"Error loading points data: {request.error}");
+                    onSuccess(new Dictionary<ulong, int>()); 
+                }
+            }
+        }
+
+    IEnumerator Save_Data_Server(Dictionary<ulong, int> totalPointsDataDictionary)
+    {
+        foreach (var kvp in totalPointsDataDictionary)
+        {
+            Logger.LogInfo($"Player ID: {kvp.Key}, Points: {kvp.Value}");
+        }
+        Logger.LogInfo($"Saving data to server");
+        string url = $"{baseUrl}/points/all";
+
+        string jsonData = JsonConvert.SerializeObject( totalPointsDataDictionary );
+        Logger.LogInfo($"Serialized JSON Data: {jsonData}");
+        using (UnityWebRequest request = new(url, "POST"))
+        {
+            byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(jsonData);
+            request.uploadHandler = new UploadHandlerRaw(jsonToSend);
+            request.downloadHandler = new DownloadHandlerBuffer();
+            request.SetRequestHeader("Content-Type", "application/json");
+            
+            yield return request.SendWebRequest();
+
+            if (request.result == UnityWebRequest.Result.Success)
+            {
+                Logger.LogInfo("All points data saved successfully.");
+            }
+            else
+            {
+                Logger.LogError($"Error saving points data: {request.error}");
+                ChatApi.AddLocalMessage("There was an error while saving the points to the server!");
+            }
+        }
+        
+    }
+
+    IEnumerator PingServer()
+    {
+        string url = $"{baseUrl}/ping";
+        MessengerApi.Log("Connecting to the Coin Server");
+        using (UnityWebRequest webRequest = UnityWebRequest.Get(url))
+        {
+             webRequest.timeout = 80;  
+            yield return webRequest.SendWebRequest();
+
+            if (webRequest.result == UnityWebRequest.Result.ConnectionError || webRequest.result == UnityWebRequest.Result.ProtocolError)
+            {
+                MessengerApi.LogError("Failed connecting with the Coin Server");
+                Logger.LogError("Error Pinging Server: " + webRequest.error);
+            }
+            else
+            {
+                MessengerApi.LogSuccess("Connected to the Coin Server!");
+                Logger.LogInfo("Server is active, response: " + webRequest.downloadHandler.text);
+            }
+        }
+    }
+    
+    // Handler for the SettingChanged event
+    private void SettingChangedHandler(object sender, EventArgs e)
+    {
+        ConfigEntryBase changedSetting = sender as ConfigEntryBase;
+
+        // Trigger the custom event
+        OnSettingChanged?.Invoke(this, new SettingChangedEventArgs(changedSetting));
+    }
 
 
     private void OnDestroy()
