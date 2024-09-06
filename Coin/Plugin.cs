@@ -779,6 +779,7 @@ public class Plugin : BaseUnityPlugin
                     else
                     {
                         LoadFromLocalFile(playerIdsInLobby); // Fall back to local if server fails
+                        usingLocal = true;
                     }
                 }));
             }
@@ -786,6 +787,7 @@ public class Plugin : BaseUnityPlugin
             {
                 // If not using server, load from local storage for players in the lobby
                 LoadFromLocalFile(playerIdsInLobby);
+                usingLocal = true;
             }
         }
 
@@ -800,7 +802,6 @@ public class Plugin : BaseUnityPlugin
                     .Where(entry => playerIdsInLobby.Contains(entry.Key))
                     .ToDictionary(entry => entry.Key, entry => entry.Value);
                 
-                usingLocal = true;
                 Logger.LogInfo("Loaded points from local file for players in the lobby.");
             }
             else
@@ -845,7 +846,7 @@ public class Plugin : BaseUnityPlugin
 
         void OnPlayerJoined(ZeepkistNetworkPlayer player)
         {
-            if(ZeepkistNetwork.LocalPlayerHasHostPowers()){
+            if(ZeepkistNetwork.LocalPlayerHasHostPowers()&&configUseServer.Value&&!usingLocal){
                 GetUserPointsServer(player.SteamID);
             }
         }
@@ -861,7 +862,7 @@ public class Plugin : BaseUnityPlugin
                     }));
         }
 
-        
+
     }
 
 
