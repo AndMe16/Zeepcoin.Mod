@@ -15,6 +15,8 @@ using System.Collections;
 using Newtonsoft.Json;
 using UnityEngine.Networking;
 using ZeepSDK.Messaging;
+using UnityEngine;
+using System.Linq;
 
 
 
@@ -72,6 +74,8 @@ public class Plugin : BaseUnityPlugin
     private bool pointsPaused = false;
     private string serverMessage;
     private bool usingLocal=true;
+    private bool isFirstCon = true;
+    private Coroutine pingCoroutine; // Reference to the running coroutine
 
    
                                     
@@ -139,14 +143,14 @@ public class Plugin : BaseUnityPlugin
 
         void SubscribeToEvents()
         {
-            //ChatApi.ChatMessageReceived += MessageReceived;
+            
             MultiplayerApi.DisconnectedFromGame += OnDisconnectedFromGame;
             RacingApi.LevelLoaded += OnRoundStarted;
             RacingApi.RoundEnded += OnRoundEnded;
             MultiplayerApi.JoinedRoom += OnJoinedRoom;
             OnSettingChanged += OnSettingsChanged;
-            // Subscribe to the MasterChanged event
             ZeepkistNetwork.MasterChanged += OnMasterChanged;
+            MultiplayerApi.PlayerJoined += OnPlayerJoined;
             
         }
 
@@ -385,6 +389,8 @@ public class Plugin : BaseUnityPlugin
             
             stopAsignPointsTimer();
             pointsPaused = false;
+            StopPingingServer();
+
             
         }
         void OnStopCommand(string argument)
@@ -560,7 +566,7 @@ public class Plugin : BaseUnityPlugin
                 coinPaused = false;
                 ChatApi.SendMessage("Round started. Prediction has been resumed.");
             }
-            if(pointsPaused){
+            if(pointsPaused&&ZeepkistNetwork.LocalPlayerHasHostPowers()){
                 Logger.LogInfo($"Resuming asignPointsTimer");
                 asignPointsTimer?.Start();
                 pointsPaused = false;
@@ -630,7 +636,7 @@ public class Plugin : BaseUnityPlugin
                 startAsignPointsTimer();
                 LoadAllData();
                 if(configUseServer.Value){
-                    StartCoroutine(PingServer());
+                    pingCoroutine = StartCoroutine(PingServerRoutine());
                 }
             }
             
@@ -713,10 +719,10 @@ public class Plugin : BaseUnityPlugin
                     if (totalPointsDataDictionary.ContainsKey(playerID))
                     {
                         totalPointsDataDictionary[playerID] = totalPointsDataDictionary[playerID] + points;
-                        ChatApi.AddLocalMessage($"Refunding {points} to {username} with SteamID {playerID}");
+                        ChatApi.AddLocalMessage($"Refunding {points} to {username}");
                     }
                     else{
-                        ChatApi.AddLocalMessage($"{username} with SteamID {playerID} has never participated in a coin prediction!");
+                        ChatApi.AddLocalMessage($"{username} has never participated in a coin prediction!");
                     }
 
                 }
@@ -750,36 +756,59 @@ public class Plugin : BaseUnityPlugin
         modStorage.SaveToJson("LocalPlayersPoints", totalPointsDataDictionary);
         }
 
-        void LoadAllData(){
-            if (configUseServer.Value){
-                StartCoroutine(Load_Data_Server((loadedData) =>
-                {
-                    totalPointsDataDictionary = loadedData;
-                    usingLocal = false;
-                }));
-                if (totalPointsDataDictionary.Count == 0){
-                    ChatApi.AddLocalMessage("Unable to load the points from the server, using local file!");
-                    Logger.LogInfo($"Unable to load the points from the server, using local file");
-                    usingLocal = true;
-                    if (modStorage.JsonFileExists("LocalPlayersPoints")){
-                        totalPointsDataDictionary = modStorage.LoadFromJson<Dictionary<ulong, int >>("LocalPlayersPoints");
-                    }
-                    else{
-                        Logger.LogInfo($"Did not found local file LocalPlayersPoints.json");
-                    }
-                }
+        void LoadAllData()
+        {
+            // Extract player IDs from the current lobby
+            List<ulong> playerIdsInLobby = new List<ulong>();
+            foreach (var player in ZeepkistNetwork.PlayerList)
+            {
+                playerIdsInLobby.Add(player.SteamID); // Assuming 'playerId' is the ulong identifier
             }
-            else{
-                if (modStorage.JsonFileExists("LocalPlayersPoints"))
+
+            if (configUseServer.Value)
+            {
+                // Only load data for players in the lobby from the server
+                StartCoroutine(Load_Data_Server(playerIdsInLobby, (loadedData) =>
                 {
-                    totalPointsDataDictionary = modStorage.LoadFromJson<Dictionary<ulong, int >>("LocalPlayersPoints");
-                    Logger.LogInfo($"Loading points from local file LocalPlayersPoints.json");
-                }
-                else{
-                    Logger.LogInfo($"Did not found local file LocalPlayersPoints.json");
-                }
+                    if (loadedData != null && loadedData.Count > 0)
+                    {
+                        totalPointsDataDictionary = loadedData;
+                        usingLocal = false;
+                        Logger.LogInfo("Loaded points from the server for players in the lobby.");
+                    }
+                    else
+                    {
+                        LoadFromLocalFile(playerIdsInLobby); // Fall back to local if server fails
+                    }
+                }));
+            }
+            else
+            {
+                // If not using server, load from local storage for players in the lobby
+                LoadFromLocalFile(playerIdsInLobby);
             }
         }
+
+        void LoadFromLocalFile(List<ulong> playerIdsInLobby)
+        {
+            if (modStorage.JsonFileExists("LocalPlayersPoints"))
+            {
+                var allPointsData = modStorage.LoadFromJson<Dictionary<ulong, int>>("LocalPlayersPoints");
+                
+                // Filter to only include players in the lobby
+                totalPointsDataDictionary = allPointsData
+                    .Where(entry => playerIdsInLobby.Contains(entry.Key))
+                    .ToDictionary(entry => entry.Key, entry => entry.Value);
+                
+                usingLocal = true;
+                Logger.LogInfo("Loaded points from local file for players in the lobby.");
+            }
+            else
+            {
+                Logger.LogInfo("Local file LocalPlayersPoints.json not found, no points loaded.");
+            }
+        }
+
 
         void OnSettingsChanged(object sender, SettingChangedEventArgs e)
         {
@@ -788,8 +817,8 @@ public class Plugin : BaseUnityPlugin
                 stopAsignPointsTimer();
                 startAsignPointsTimer();
             }
-            else if((e.ChangedSetting == configUseServer)&&MultiplayerApi.IsPlayingOnline){
-                StartCoroutine(PingServer());
+            else if((e.ChangedSetting == configUseServer)&&MultiplayerApi.IsPlayingOnline&&configUseServer.Value){
+                pingCoroutine = StartCoroutine(PingServerRoutine());
             } 
         }
         void OnMasterChanged(ZeepkistNetworkPlayer player)
@@ -799,44 +828,87 @@ public class Plugin : BaseUnityPlugin
                 startAsignPointsTimer();
                 LoadAllData();
                 if(configUseServer.Value){
-                    StartCoroutine(PingServer());
+                    pingCoroutine = StartCoroutine(PingServerRoutine());
                 }
             }
         }
-            
+
+        // Method to stop pinging the server
+        void StopPingingServer()
+        {
+            if (pingCoroutine != null)
+            {
+                StopCoroutine(pingCoroutine); // Stop the running ping coroutine
+                Debug.Log("Stopped pinging the server.");
+            }
+        }
+
+        void OnPlayerJoined(ZeepkistNetworkPlayer player)
+        {
+            if(ZeepkistNetwork.LocalPlayerHasHostPowers()){
+                GetUserPointsServer(player.SteamID);
+            }
+        }
+
+        void GetUserPointsServer(ulong playerId)
+        {
+            StartCoroutine(Load_Single_Player_Points(playerId, 
+                    (points) => {
+                        totalPointsDataDictionary[playerId] = points;
+                    }, 
+                    (error) => {
+                        Logger.LogWarning($"Failed to load points for player {playerId}: {error}");
+                    }));
+        }
+
+        
     }
 
-  
 
+    IEnumerator Load_Data_Server(List<ulong> playerIdsInLobby, System.Action<Dictionary<ulong, int>> onSuccess)
+    {
+        Logger.LogMessage($"Loading data from server for players in the lobby");
 
-    IEnumerator Load_Data_Server(System.Action<Dictionary<ulong, int>> onSuccess)
+        // Define the URL for the API endpoint that handles player filtering
+        string url = $"{baseUrl}/points/players"; 
+
+        // Create a JSON payload with the list of player IDs to send to the server
+        string jsonPayload = JsonConvert.SerializeObject(new { playerIds = playerIdsInLobby });
+
+        // Create a UnityWebRequest for a POST request to send the player IDs
+        using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
         {
-            Logger.LogMessage($"Loading data from server");
-            string url = $"{baseUrl}/points/all"; 
+            byte[] bodyRaw = new System.Text.UTF8Encoding().GetBytes(jsonPayload);
+            request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            request.downloadHandler = new DownloadHandlerBuffer();
+            request.SetRequestHeader("Content-Type", "application/json");
 
-            using (UnityWebRequest request = UnityWebRequest.Get(url))
+            // Send the request and wait for the response
+            yield return request.SendWebRequest();
+
+            if (request.result == UnityWebRequest.Result.Success)
             {
-                yield return request.SendWebRequest();
+                // Deserialize the response into a dictionary
+                string jsonResponse = request.downloadHandler.text;
+                Dictionary<ulong, int> totalPointsDataDictionary = JsonConvert.DeserializeObject<Dictionary<ulong, int>>(jsonResponse);
+                
+                Logger.LogInfo("Data loaded from server:");
+                foreach (var kvp in totalPointsDataDictionary)
+                {
+                    Logger.LogInfo($"Player ID: {kvp.Key}, Points: {kvp.Value}");
+                }
 
-                if (request.result == UnityWebRequest.Result.Success)
-                {
-                    string jsonResponse = request.downloadHandler.text;
-                    Dictionary<ulong, int> totalPointsDataDictionary = JsonConvert.DeserializeObject<Dictionary<ulong, int>>(jsonResponse);
-                    Logger.LogInfo($"Data loaded from server:");
-                    foreach (var kvp in totalPointsDataDictionary)    
-                    {
-                        Logger.LogInfo($"Player ID: {kvp.Key}, Points: {kvp.Value}");
-                    }
-                    
-                    onSuccess(totalPointsDataDictionary);
-                }
-                else
-                {
-                    Logger.LogError($"Error loading points data: {request.error}");
-                    onSuccess(new Dictionary<ulong, int>()); 
-                }
+                // Call the success callback with the loaded data
+                onSuccess(totalPointsDataDictionary);
+            }
+            else
+            {
+                Logger.LogError($"Error loading points data: {request.error}");
+                // If there is an error, call the callback with an empty dictionary
+                onSuccess(new Dictionary<ulong, int>());
             }
         }
+    }
 
     IEnumerator Save_Data_Server(Dictionary<ulong, int> totalPointsDataDictionary)
     {
@@ -874,10 +946,13 @@ public class Plugin : BaseUnityPlugin
     IEnumerator PingServer()
     {
         string url = $"{baseUrl}/ping";
-        MessengerApi.Log("Connecting to the Coin Server");
+        if(isFirstCon){
+            MessengerApi.Log("Connecting to the Coin Server");
+        }
+        
         using (UnityWebRequest webRequest = UnityWebRequest.Get(url))
         {
-             webRequest.timeout = 80;  
+                webRequest.timeout = 80;  
             yield return webRequest.SendWebRequest();
 
             if (webRequest.result == UnityWebRequest.Result.ConnectionError || webRequest.result == UnityWebRequest.Result.ProtocolError)
@@ -887,12 +962,16 @@ public class Plugin : BaseUnityPlugin
             }
             else
             {
-                MessengerApi.LogSuccess("Connected to the Coin Server!");
+                if(isFirstCon){
+                    MessengerApi.LogSuccess("Connected to the Coin Server!");
+                    isFirstCon = false;
+                }
+            
                 Logger.LogInfo("Server is active, response: " + webRequest.downloadHandler.text);
             }
         }
     }
-    
+
     // Handler for the SettingChanged event
     private void SettingChangedHandler(object sender, EventArgs e)
     {
@@ -902,6 +981,56 @@ public class Plugin : BaseUnityPlugin
         OnSettingChanged?.Invoke(this, new SettingChangedEventArgs(changedSetting));
     }
 
+    // Coroutine to ping the server every 10 minutes (600 seconds)
+    private IEnumerator PingServerRoutine()
+    {
+        while (true)
+        {
+            yield return PingServer();
+            yield return new WaitForSeconds(600); // 600 seconds = 10 minutes
+        }
+    }
+
+    IEnumerator Load_Single_Player_Points(ulong playerId, System.Action<int> onSuccess, System.Action<string> onFailure)
+    {
+        Logger.LogMessage($"Loading points for player ID: {playerId}");
+
+        // Define the URL for fetching points of a single player
+        string url = $"{baseUrl}/points/player/{playerId}";
+
+        using (UnityWebRequest request = UnityWebRequest.Get(url))
+        {
+            // Send the request and wait for the response
+            yield return request.SendWebRequest();
+
+            if (request.result == UnityWebRequest.Result.Success)
+            {
+                // Deserialize the response JSON
+                string jsonResponse = request.downloadHandler.text;
+                var response = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonResponse);
+
+                if (response.ContainsKey("points"))
+                {
+                    int points = Convert.ToInt32(response["points"]);
+                    Logger.LogInfo($"Points for player {playerId}: {points}");
+                    onSuccess(points);
+                }
+                else if (response.ContainsKey("error"))
+                {
+                    string error = response["error"].ToString();
+                    Logger.LogError($"Error loading points for player {playerId}: {error}");
+                    onFailure(error);
+                }
+            }
+            else
+            {
+                string error = request.error;
+                Logger.LogError($"Error loading points for player {playerId}: {error}");
+                onFailure(error);
+            }
+        }
+    }
+  
 
     private void OnDestroy()
     {
