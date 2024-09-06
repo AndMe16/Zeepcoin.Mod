@@ -347,7 +347,8 @@ public class Plugin : BaseUnityPlugin
 
         void EndPrediction()
         {
-            
+            countdownTimer?.Stop();
+            countdownTimer?.Dispose();    
             if(!ZeepkistNetwork.LocalPlayerHasHostPowers()){
                 ChatApi.AddLocalMessage("You lost host during the prediction! Prediction stoped.");
                 ChatApi.SendMessage($"{SteamClient.Name} lost host during the prediction! All the points will be refunded");
@@ -367,8 +368,8 @@ public class Plugin : BaseUnityPlugin
                 Logger.LogMessage($"Ending Prediction WITH enough points. tails: {totalTailsPoints} heads: {totalHeadsPoints}. result: {result}");
                 Pay(result);
             }
-            
             ClearVars();
+            
         }
 
         void NotifyNotHost()
@@ -382,6 +383,8 @@ public class Plugin : BaseUnityPlugin
             Logger.LogMessage($"Player disconnected from game. coinStarted {coinStarted}");
             if (coinStarted)
             {
+                countdownTimer?.Stop();
+                countdownTimer?.Dispose(); 
                 RefundPoints();
                 ClearVars();
                 
@@ -399,6 +402,8 @@ public class Plugin : BaseUnityPlugin
             if (coinStarted && ZeepkistNetwork.LocalPlayerHasHostPowers())
             {
                 Logger.LogMessage("Stoping ongoing prediction");
+                countdownTimer?.Stop();
+                countdownTimer?.Dispose(); 
                 RefundPoints();
                 ClearVars();
                 ChatApi.SendMessage($"{SteamClient.Name} canceled the prediction. All the points will be refunded");
@@ -438,7 +443,7 @@ public class Plugin : BaseUnityPlugin
             }
             
 
-            Logger.LogMessage($"A !heads {command} was received from player {playerId} {username} using {arguments} points");
+            Logger.LogMessage($"A !{command} was received from player {playerId} {username} using {arguments} points");
             
             if (!coinStarted)
             {
@@ -904,7 +909,7 @@ public class Plugin : BaseUnityPlugin
             }
             else
             {
-                Logger.LogError($"Error loading points data: {request.error}");
+                Logger.LogWarning($"Error loading points data: {request.error}");
                 // If there is an error, call the callback with an empty dictionary
                 onSuccess(new Dictionary<ulong, int>());
             }
