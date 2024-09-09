@@ -26,8 +26,6 @@ namespace Coin;
 [BepInDependency("ZeepSDK")]
 public class Plugin : BaseUnityPlugin
 {   
-    public static Plugin Instance { get; private set; }
-    
     private Harmony harmony;
 
     // Configuration
@@ -49,6 +47,7 @@ public class Plugin : BaseUnityPlugin
     private bool pointsPaused = false;
     private bool usingLocal=true;
     private bool isFirstCon = true;
+    private bool wasHost = false;
 
     // Stats and ratios
     private int totalTailsPoints = 0;
@@ -80,27 +79,23 @@ public class Plugin : BaseUnityPlugin
     private readonly string baseUrl = "https://zeep-coin.onrender.com";
 
     // Storage
-    IModStorage modStorage = StorageApi.CreateModStorage(Instance); 
+    IModStorage modStorage;
 
     // Events
     private event EventHandler<SettingChangedEventArgs> OnSettingChanged;
     
-
     private void Awake()
     {
         harmony = new Harmony("andme123.coin");
         harmony.PatchAll();
-
         Logger.LogInfo($"Plugin andme123.coin is loaded!");
+        modStorage = StorageApi.CreateModStorage(this);
         ConfigurationInit();
         SubscribeToEvents();
-        if(IsHost()){
-            SubscribeToConfigEvents();
-            RegisterCommands();
-        }
-        
-
+        SubscribeToConfigEvents();
+        RegisterCommands();
     }
+    
 
     // Configuration //                                
     private void ConfigurationInit(){
@@ -313,6 +308,7 @@ public class Plugin : BaseUnityPlugin
             totalPointsDataDictionary[player.SteamID] += points;
             ChatApi.AddLocalMessage($"Refunding {points} points to {username}");
             Logger.LogInfo($"Refunding {points} points to {username}. PlayerID: {player.SteamID}");
+            SaveAllData(); /// REVISAR LUEGO. SOLO GUARDAR PUNTOS DE 1 JUGADOR!!!!!!!
         }
         else
         {
@@ -332,7 +328,7 @@ public class Plugin : BaseUnityPlugin
         HandleHeadsTailsCommand(isLocal,playerId,arguments,"heads");
     }
     private void HandleHeadsTailsCommand(bool isLocal,ulong playerId, string arguments, string command){
-        string username = GetPlayerUsername(isLocal, playerId);
+        string username = GetPlayerUsername(isLocal, playerId, out playerId);
         Logger.LogInfo($"A !{command} was received from player {playerId} ({username}) using {arguments} points");
         if (!coinStarted)
         {
@@ -350,14 +346,16 @@ public class Plugin : BaseUnityPlugin
 
         HandlePrediction(playerId, username,command, args_int);
     }
-    private string GetPlayerUsername(bool isLocal, ulong playerId)
+    private string GetPlayerUsername(bool isLocal, ulong playerId, out ulong playerId_out)
     {
         if (isLocal)
         {
+            playerId_out = SteamClient.SteamId;
             return SteamClient.Name;
         }
 
         var player = ZeepkistNetwork.PlayerList.FirstOrDefault(p => p.SteamID == playerId);
+        playerId_out = playerId;
         return player?.Username ?? "Unknown Player";
     }
     private void HandlePrediction(ulong playerId,string username, string commandType, int pointsSent)
@@ -438,7 +436,7 @@ public class Plugin : BaseUnityPlugin
     // OnCheckPointsCommand //
     private void OnCheckPointsCommand(bool isLocal, ulong playerId, string arguments){
         if (!IsHost()) return;
-        string username = GetPlayerUsername(isLocal,playerId);
+        string username = GetPlayerUsername(isLocal,playerId, out playerId);
         Logger.LogInfo($"A check_points command was received from player {playerId} {username}");
         ShowRemainingPoints(playerId,username);
     }
@@ -834,7 +832,11 @@ public class Plugin : BaseUnityPlugin
     }
     private void OnDisconnectedFromGame()
     {
-        Logger.LogMessage($"Player disconnected from game. coinStarted {coinStarted}");
+        Logger.LogInfo($"Player disconnected from game. coinStarted {coinStarted}");
+        if(wasHost){
+            SaveAllData();
+            wasHost=false;
+        }
         if (coinStarted)
         {
             countdownTimer?.Stop();
@@ -849,7 +851,7 @@ public class Plugin : BaseUnityPlugin
 
     private void OnRoundStarted()
     {
-        Logger.LogMessage($"Round started. countdownLeft: {countdownLeft} coinStarted: {coinStarted} coinPaused: {coinPaused}");
+        Logger.LogInfo($"Round started. countdownLeft: {countdownLeft} coinStarted: {coinStarted} coinPaused: {coinPaused}");
         if (countdownLeft > 0 && coinStarted && ZeepkistNetwork.LocalPlayerHasHostPowers() && coinPaused) // Check if there's an ongoing prediction
         {
             StartCountdown(); // Resume the countdown
@@ -864,7 +866,7 @@ public class Plugin : BaseUnityPlugin
     }
     private void OnRoundEnded()
     {
-        Logger.LogMessage($"Round ended. countdownLeft: {countdownLeft} coinStarted: {coinStarted}");
+        Logger.LogInfo($"Round ended. countdownLeft: {countdownLeft} coinStarted: {coinStarted}");
         if (countdownLeft > 0 &&coinStarted && ZeepkistNetwork.LocalPlayerHasHostPowers())
         {
             countdownTimer?.Stop(); 
@@ -878,10 +880,11 @@ public class Plugin : BaseUnityPlugin
         Logger.LogInfo("Stoping asignPointsTimer");
     }
     private void OnJoinedRoom(){
-        Logger.LogMessage("Joining Room");
-        if(ZeepkistNetwork.LocalPlayerHasHostPowers()){
+        Logger.LogInfo("Joining Room");
+        if(IsHost()){
             StartAsignPointsTimer();
             LoadAllData();
+            wasHost = true;
             if(configUseServer.Value){
                 pingCoroutine = StartCoroutine(PingServerRoutine());
             }
@@ -890,11 +893,11 @@ public class Plugin : BaseUnityPlugin
     private void OnSettingsChanged(object sender, SettingChangedEventArgs e)
     {
         Logger.LogInfo($"Setting changed: {e.ChangedSetting.Definition.Key}");
-        if((e.ChangedSetting == configPointsRechargeInterval) && MultiplayerApi.IsPlayingOnline ){
+        if((e.ChangedSetting == configPointsRechargeInterval) && MultiplayerApi.IsPlayingOnline && IsHost()){
             StopAsignPointsTimer();
             StartAsignPointsTimer();
         }
-        else if((e.ChangedSetting == configUseServer)&&MultiplayerApi.IsPlayingOnline&&configUseServer.Value){
+        else if((e.ChangedSetting == configUseServer)&&MultiplayerApi.IsPlayingOnline&&configUseServer.Value&&IsHost()){
             pingCoroutine = StartCoroutine(PingServerRoutine());
         } 
     }
@@ -906,10 +909,12 @@ public class Plugin : BaseUnityPlugin
             RegisterCommands();
             StartAsignPointsTimer();
             LoadAllData();
+            wasHost = true;
             if(configUseServer.Value){
                 pingCoroutine = StartCoroutine(PingServerRoutine());
             }
         }
+        wasHost = false;
     }
 
     // Method to stop pinging the server
@@ -924,7 +929,7 @@ public class Plugin : BaseUnityPlugin
 
     private void OnPlayerJoined(ZeepkistNetworkPlayer player)
     {
-        if(ZeepkistNetwork.LocalPlayerHasHostPowers()&&configUseServer.Value&&!usingLocal){
+        if(IsHost()&&configUseServer.Value&&!usingLocal){
             GetUserPointsServer(player.SteamID);
         }
     }
