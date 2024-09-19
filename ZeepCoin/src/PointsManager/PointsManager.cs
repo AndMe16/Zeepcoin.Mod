@@ -180,4 +180,10 @@ public class PointsManager : MonoBehaviour
     {
         StartCoroutine(networkingManager.Save_Data_Server(playerPoints));
     }
+
+
+    public void ClearPlayerPoints()
+    {
+        playerPoints.Clear();
+    }
 }

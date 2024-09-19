@@ -44,6 +44,7 @@ public class PredictionManager : MonoBehaviour
     private ServerMessageManager serverMessageManager;
     private PointsManager pointsManager;
     private NotificationManager notificationManager;
+    private NetworkingManager networkingManager;
 
     private Coroutine PredictionCountdownCoroutine;
 
@@ -52,6 +53,7 @@ public class PredictionManager : MonoBehaviour
         serverMessageManager = FindObjectOfType<ServerMessageManager>();
         pointsManager = FindObjectOfType<PointsManager>();
         notificationManager = FindObjectOfType<NotificationManager>();
+        networkingManager = FindObjectOfType<NetworkingManager>();
     }
 
 
@@ -103,16 +105,14 @@ public class PredictionManager : MonoBehaviour
         }
         voteOrder.Insert(0, playerId);
         // Update serverMessage voters table
-        serverMessageManager.UpdateVotersTable(playerPredictions,remainingPoints-points,voteOrder);
-        
-        
+        serverMessageManager.UpdateVotersTable(playerPredictions,remainingPoints-points,voteOrder);        
     }
 
     // End the prediction and determine the result
     public void EndPrediction()
     {
         predictionActive = false;
-
+        networkingManager.SavedData = false;
         // Get total predicted points
         ulong totalPredictedPoints = TotalPredictedPoints(out ulong totalHeadsPoints, out ulong totalTailsPoints);
 
@@ -167,6 +167,7 @@ public class PredictionManager : MonoBehaviour
     public void StopPrediction()
     {
         StopCoroutine(PredictionCountdownCoroutine);
+        networkingManager.SavedData = false;
         RefundPredictedPlayersPoints();
         predictionActive = false;
         OnPredictionStoped?.Invoke();

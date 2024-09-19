@@ -7,6 +7,7 @@ public class ModConfig : MonoBehaviour
 {
     private static PointsManager pointsManager;
     private static ServerMessageManager serverMessageManager;
+    private static NetworkingManager networkingManager;
     public static ConfigEntry<bool> useGlobalDatabase;
     public static ConfigEntry<int> rechargePoints;
     public static ConfigEntry<int> rechargeInterval;
@@ -15,7 +16,7 @@ public class ModConfig : MonoBehaviour
     // Constructor that takes a ConfigFile instance from the main class
     public static void Initialize(ConfigFile config)
     {
-        useGlobalDatabase = config.Bind("Database", "Use Global Database", false,
+        useGlobalDatabase = config.Bind("Database", "Use Global Database", true,
                                         "Player's points are getting stored in a global database");
 
         rechargePoints = config.Bind("User Database",    
@@ -43,6 +44,7 @@ public class ModConfig : MonoBehaviour
 
         pointsManager = FindObjectOfType<PointsManager>();
         serverMessageManager = FindObjectOfType<ServerMessageManager>();
+        networkingManager = FindObjectOfType<NetworkingManager>();
     }
 
 
@@ -53,7 +55,8 @@ public class ModConfig : MonoBehaviour
         Plugin.Logger.LogInfo($"Setting changed: {configEntry .Definition.Key}");
         if (configEntry  == useGlobalDatabase)
         {
-            Plugin.Logger.LogInfo($"Setting changed: {configEntry .Definition.Key}");
+            _ = networkingManager.SetIsGlobalAsync(true); 
+
         }
         else if (configEntry  == rechargePoints)
         {
