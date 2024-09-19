@@ -1,5 +1,6 @@
 using BepInEx.Configuration;
 using UnityEngine;
+using ZeepSDK.Messaging;
 
 namespace ZeepCoin;
 
@@ -52,26 +53,77 @@ public class ModConfig : MonoBehaviour
     {
         var configEntry = sender as ConfigEntryBase;
 
-        Plugin.Logger.LogInfo($"Setting changed: {configEntry .Definition.Key}");
-        if (configEntry  == useGlobalDatabase)
+        Plugin.Logger.LogInfo($"Setting changed: {configEntry.Definition.Key}");
+
+        if (configEntry == useGlobalDatabase)
         {
-            _ = networkingManager.SetIsGlobalAsync(true); 
+            // Update the networking manager based on the new value of useGlobalDatabase
+            if (useGlobalDatabase.Value)
+            {
+                MessengerApi.LogWarning("The other setting will reset since you are using the global database",10); 
+            } 
+            _ = networkingManager.SetIsGlobalAsync(useGlobalDatabase.Value);
 
         }
-        else if (configEntry  == rechargePoints)
+        else if (configEntry == rechargePoints)
         {
-            pointsManager.RechargePoints = (uint)rechargePoints.Value;
-            serverMessageManager.UpdateRechargeInfo();  
+            if (!useGlobalDatabase.Value) // Check if useGlobalDatabase is false before updating
+            {
+                pointsManager.RechargePoints = (uint)rechargePoints.Value;
+                serverMessageManager.UpdateRechargeInfo();  
+            }
+            else
+            {
+                Plugin.Logger.LogInfo("Global database is enabled; rechargePoints setting is ignored.");
+                MessengerApi.LogWarning("\"Points added per recharge\" will have no effect, you are using the global database",10);
+            }
         }
-        else if (configEntry  == rechargeInterval)
+        else if (configEntry == rechargeInterval)
         {
+            if (!useGlobalDatabase.Value) // Check if useGlobalDatabase is false before updating
+            {
+                pointsManager.RechargeInterval = rechargeInterval.Value;
+                serverMessageManager.UpdateRechargeInfo();
+            }
+            else
+            {
+                Plugin.Logger.LogInfo("Global database is enabled; rechargeInterval setting is ignored.");
+                MessengerApi.LogWarning("\"Recharge Time interval\" will have no effect, you are using the global database",10);
+            }
+        }
+        else if (configEntry == defaultPoints)
+        {
+            if (!useGlobalDatabase.Value) // Check if useGlobalDatabase is false before updating
+            {
+                pointsManager.DefaultInitialPoints = (uint)defaultPoints.Value;
+            }
+            else
+            {
+                Plugin.Logger.LogInfo("Global database is enabled; defaultPoints setting is ignored.");
+                MessengerApi.LogWarning("\"Default initial\" points will have no effect, you are using the global database",10);
+            }
+        }
+    }
+
+    public static async void LoadConfigValues()
+    {
+        var (rechargePoints_, rechargeInterval_, defaultPoints_, error) = await networkingManager.LoadServerConfigValuesAsync();
+
+        if (string.IsNullOrEmpty(error))
+        {
+            Plugin.Logger.LogInfo($"Recharge Points: {rechargePoints}, Recharge Interval: {rechargeInterval}, Default Points: {defaultPoints}");
+            rechargePoints.Value = rechargePoints_;
+            rechargeInterval.Value = rechargeInterval_;
+            defaultPoints.Value = defaultPoints_;
+            pointsManager.RechargePoints = (uint)rechargePoints.Value;
+            serverMessageManager.UpdateRechargeInfo();
             pointsManager.RechargeInterval = rechargeInterval.Value;
             serverMessageManager.UpdateRechargeInfo();
-            
+            pointsManager.DefaultInitialPoints = (uint)defaultPoints.Value;  
         }
-        else if (configEntry  == defaultPoints)
+        else
         {
-            pointsManager.DefaultInitialPoints = (uint)defaultPoints.Value;
+            Plugin.Logger.LogError($"Failed to load configuration values: {error}");
         }
     }
 }

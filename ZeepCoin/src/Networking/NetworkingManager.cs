@@ -51,6 +51,10 @@ public class NetworkingManager : MonoBehaviour
             isGlobal = value;
             pointsManager.ClearPlayerPoints();
             Plugin.Logger.LogInfo($"IsGlobal has been updated to: {value}");
+            if (isGlobal)
+            {
+                ModConfig.LoadConfigValues();
+            }
         }
         else
         {
@@ -110,6 +114,10 @@ public class NetworkingManager : MonoBehaviour
             {
                 if(isFirstCon){
                     MessengerApi.LogSuccess("Connected to the Coin Server!");
+                    if (isGlobal)
+                    {
+                        ModConfig.LoadConfigValues();
+                    }
                     isFirstCon = false;
                     isFirstDiscon = true;
                 }
@@ -222,6 +230,77 @@ public class NetworkingManager : MonoBehaviour
         }
 
         return true;  // Cambia esto según la condición real que quieras verificar
+    }
+
+    public IEnumerator FetchAllConfigValues(System.Action<Dictionary<string, string>> onSuccess, System.Action<string> onFailure)
+    {
+        string url = $"{baseUrl}/config_values";
+
+        using (UnityWebRequest request = UnityWebRequest.Get(url))
+        {
+            request.timeout = 10; 
+            yield return request.SendWebRequest();
+
+            if (request.result == UnityWebRequest.Result.Success)
+            {
+                try
+                {
+                    string jsonResponse = request.downloadHandler.text;
+                    var configValues = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonResponse);
+                    onSuccess(configValues);
+                }
+                catch (Exception ex)
+                {
+                    onFailure($"Failed to deserialize JSON: {ex.Message}");
+                }
+            }
+            else
+            {
+                onFailure($"Request error: {request.error}");
+            }
+        }
+    }
+
+    public async Task<(int rechargePoints, int rechargeInterval, int defaultPoints, string error)> LoadServerConfigValuesAsync()
+    {
+        var tcs = new TaskCompletionSource<(int, int, int, string)>();
+
+        StartCoroutine(FetchAllConfigValues(
+            configValues =>
+            {
+                // Handle the retrieved configuration values
+                int rechargePoints = 0;
+                int rechargeInterval = 0;
+                int defaultPoints = 0;
+                string error = null;
+
+                foreach (var kvp in configValues)
+                {
+                    Plugin.Logger.LogInfo($"Config ID: {kvp.Key}, Value: {kvp.Value}");
+
+                    if (kvp.Key == "rechargePoints" && int.TryParse(kvp.Value, out var rp))
+                    {
+                        rechargePoints = rp;
+                    }
+                    else if (kvp.Key == "rechargeInterval" && int.TryParse(kvp.Value, out var ri))
+                    {
+                        rechargeInterval = ri;
+                    }
+                    else if (kvp.Key == "defaultPoints" && int.TryParse(kvp.Value, out var dp))
+                    {
+                        defaultPoints = dp;
+                    }
+                }
+
+                tcs.SetResult((rechargePoints, rechargeInterval, defaultPoints, error));
+            },
+            errorMsg =>
+            {
+                tcs.SetResult((0, 0, 0, errorMsg));
+            }
+        ));
+
+        return await tcs.Task;
     }
 
 
