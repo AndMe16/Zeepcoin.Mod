@@ -75,6 +75,20 @@ public class NetworkingManager : MonoBehaviour
     // Server
     private readonly string baseUrl = "https://zeep-coin.onrender.com";
 
+
+    [System.Serializable]
+    public class PlayerPointsData
+    {
+        public ulong playerId;
+        public uint points;
+
+        public PlayerPointsData(ulong playerId, uint points)
+        {
+            this.playerId = playerId;
+            this.points = points;
+        }
+    }
+
     void Start()
     {
         isGlobal = ModConfig.useGlobalDatabase.Value;
@@ -152,9 +166,9 @@ public class NetworkingManager : MonoBehaviour
         isFirstDiscon = true;
     }
 
-    public IEnumerator Load_Single_Player_Points(ulong playerId, System.Action<int> onSuccess, System.Action<string> onFailure)
+    public IEnumerator LoadSinglePlayerPoints(ulong playerId, System.Action<int> onSuccess, System.Action<string> onFailure)
     {
-        Plugin.Logger.LogMessage($"Loading points for player ID: {playerId}");
+        Plugin.Logger.LogInfo($"Loading points for player ID: {playerId}");
 
         // Define the URL based on whether it's global or host-specific points
         string url = isGlobal 
@@ -195,16 +209,17 @@ public class NetworkingManager : MonoBehaviour
         }
     }
 
-    public IEnumerator Save_Data_Server(Dictionary<ulong, uint> totalPointsDataDictionary)
+    public IEnumerator SaveSinglePlayerPoints(ulong playerId, uint points)
     {
-        Plugin.Logger.LogInfo("Saving data to server");
+        Plugin.Logger.LogInfo($"Saving data for player {playerId} to server");
 
         // Define the URL based on whether it's global or host-specific points
         string url = isGlobal 
-            ? $"{baseUrl}/points/global" 
-            : $"{baseUrl}/points/host/{SteamClient.SteamId}";
+            ? $"{baseUrl}/points/global/player/{playerId}" 
+            : $"{baseUrl}/points/host/{SteamClient.SteamId}/player/{playerId}";
 
-        string jsonData = JsonConvert.SerializeObject(totalPointsDataDictionary);
+        PlayerPointsData data = new PlayerPointsData(playerId, points);
+        string jsonData = JsonConvert.SerializeObject(data);
         Plugin.Logger.LogInfo($"Serialized JSON Data: {jsonData}");
 
         using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
@@ -242,18 +257,68 @@ public class NetworkingManager : MonoBehaviour
                 MessengerApi.LogError("Failed saving the points to the server!");
             }
         }
+            
     }
+
+    public IEnumerator SavePointsFromDict(Dictionary<ulong, uint> totalPointsDataDictionary)
+    {
+        Plugin.Logger.LogInfo("Saving data from dictionary to server");
+
+        // Define the URL based on whether it's global or host-specific points
+        string url = isGlobal 
+            ? $"{baseUrl}/points/global" 
+            : $"{baseUrl}/points/host/{SteamClient.SteamId}";
+
+        string jsonData = JsonConvert.SerializeObject(totalPointsDataDictionary);
+        Plugin.Logger.LogInfo($"Serialized JSON Data: {jsonData}");
+
+        using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
+        {
+            request.timeout = 10; 
+            byte[] jsonToSend = new UTF8Encoding().GetBytes(jsonData);
+            request.uploadHandler = new UploadHandlerRaw(jsonToSend);
+            request.downloadHandler = new DownloadHandlerBuffer();
+            request.SetRequestHeader("Content-Type", "application/json");
+
+            // Attach JWT token in the Authorization header
+            if (!string.IsNullOrEmpty(jwtToken))
+            {
+                request.SetRequestHeader("Authorization", jwtToken);
+            }
+            else
+            {
+                Debug.LogError("No JWT token available!");
+                yield break;
+            }
+            
+            // Send the request and wait for the response
+            yield return request.SendWebRequest();
+
+            if (request.result == UnityWebRequest.Result.Success)
+            {
+
+                Plugin.Logger.LogInfo("Data points saved successfully.");
+                //MessengerApi.LogSuccess("All player's points saved successfully!");
+                savedData = true;
+            }
+            else
+            {
+                Plugin.Logger.LogError($"Error saving data points: {request.error}");
+                MessengerApi.LogError("Failed saving the points to the server!");
+            }
+        }
+    }
+
 
 
     private async Task<bool> WaitForConditionAsync()
     {
-       // Espera activa hasta que la condición se cumpla
         while (predictionManager.PredictionActive && savedData)
         {
-            await Task.Delay(1000);  // Espera 1 segundo antes de volver a verificar
+            await Task.Delay(1000);  
         }
 
-        return true;  // Cambia esto según la condición real que quieras verificar
+        return true;  
     }
 
     public IEnumerator FetchAllConfigValues(System.Action<Dictionary<string, string>> onSuccess, System.Action<string> onFailure)

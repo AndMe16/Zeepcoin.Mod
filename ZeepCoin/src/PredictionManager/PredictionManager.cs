@@ -147,21 +147,32 @@ public class PredictionManager : MonoBehaviour
     // Process the predictions and award points based on the result
     private void ProcessResults(double heads_ratio, double tails_ratio)
     {
-        uint addedPoints;
-        foreach (var prediction in playerPredictions)
+        List<ulong> steamIds = new List<ulong>();
+        foreach (var player in playerPredictions)
         {
-            ulong playerId = prediction.Key;
-            string playerChoice = prediction.Value.commandType;
-            uint playerPredictedPoints = prediction.Value.totalPointsSent;
-
-            if (playerChoice == result)
-            {
-                // Player guessed correctly, award points
-                addedPoints = (uint)Math.Round(playerPredictedPoints *(result=="heads"?heads_ratio:tails_ratio),MidpointRounding.AwayFromZero);
-                pointsManager.AddPoints(playerId, addedPoints);
-            }
+            steamIds.Add(player.Key);
         }
-        pointsManager.SaveData();
+        pointsManager.GetPointsFromIdsList(steamIds,(loadedPoints) =>
+        {
+            uint addedPoints;
+            foreach (var prediction in playerPredictions)
+            {
+                ulong playerId = prediction.Key;
+                string playerChoice = prediction.Value.commandType;
+                uint playerPredictedPoints = prediction.Value.totalPointsSent;
+
+                if (playerChoice == result)
+                {
+                    // Player guessed correctly, award points
+                    addedPoints = (uint)Math.Round(playerPredictedPoints *(result=="heads"?heads_ratio:tails_ratio),MidpointRounding.AwayFromZero);
+                    pointsManager.AddPoints(playerId, addedPoints);
+                }
+            }
+            pointsManager.SaveAllPlayersPoints();
+        });
+
+        
+        
     }
 
     public void StopPrediction()
@@ -176,14 +187,22 @@ public class PredictionManager : MonoBehaviour
 
     private void RefundPredictedPlayersPoints()
     {
-        foreach (var prediction in playerPredictions)
+        List<ulong> steamIds = new List<ulong>();
+        foreach (var player in playerPredictions)
         {
-            ulong playerId = prediction.Key;
-            uint playerPredictedPoints = prediction.Value.totalPointsSent;
-            // Refunding all points
-            pointsManager.AddPoints(playerId, playerPredictedPoints); 
+            steamIds.Add(player.Key);
         }
-        pointsManager.SaveData();
+        pointsManager.GetPointsFromIdsList(steamIds,(loadedPoints) =>
+        {
+            foreach (var prediction in playerPredictions)
+            {
+                ulong playerId = prediction.Key;
+                uint playerPredictedPoints = prediction.Value.totalPointsSent;
+                // Refunding all points
+                pointsManager.AddPoints(playerId, playerPredictedPoints); 
+            }
+            pointsManager.SaveAllPlayersPoints();
+        }); 
     }
 
     public bool CheckChangePrediction(ulong playerId, string act_choice)

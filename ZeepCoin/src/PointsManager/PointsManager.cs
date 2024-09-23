@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using ZeepCoin;
 using ZeepkistClient;
@@ -60,29 +61,6 @@ public class PointsManager : MonoBehaviour
             playerPoints[playerId] += points;
             Plugin.Logger.LogInfo($"Added {points} points to {playerId}. Total: {playerPoints[playerId]} points.");
         }
-        else
-        {
-            StartCoroutine(networkingManager.Load_Single_Player_Points(playerId, 
-            (remainingpoints) => {
-                Plugin.Logger.LogInfo($"Player {playerId} has {remainingpoints} points.");
-                playerPoints[playerId] = (uint)remainingpoints + points;
-                Plugin.Logger.LogInfo($"Added {points} points to {playerId}. Total: {playerPoints[playerId]} points.");
-            },
-            (error) => {
-                Plugin.Logger.LogWarning($"Failed to retrieve points for player {playerId}: {error}");
-                if (error.Contains("404"))
-                {
-                    playerPoints[playerId] = defaultInitialPoints + points;  // Initialize and add points if player doesn't exist
-                    Plugin.Logger.LogInfo($"Player {playerId} does not have any points. Assign {defaultInitialPoints} default points to player");
-                    Plugin.Logger.LogInfo($"Added {points} points to {playerId}. Total: {playerPoints[playerId]} points.");
-                }
-                else{
-                    Plugin.Logger.LogInfo($"Not loading default points of player {playerId} since the error {error} is not related to a missing player in DB");
-                }
-                
-                
-            }));
-        }
     }
 
     // Deduct points from a player
@@ -107,7 +85,7 @@ public class PointsManager : MonoBehaviour
     }
 
     // Get points for a player
-    public void GetPoints(ulong playerId, System.Action<uint> onPointsRetrieved)
+    public void GetSinglePlayerPoints(ulong playerId, System.Action<uint> onPointsRetrieved)
     {
         if (playerPoints.ContainsKey(playerId))
         {
@@ -118,7 +96,7 @@ public class PointsManager : MonoBehaviour
         else
         {
             Plugin.Logger.LogInfo("Trying to load player points from server");
-            StartCoroutine(networkingManager.Load_Single_Player_Points(playerId, 
+            StartCoroutine(networkingManager.LoadSinglePlayerPoints(playerId, 
             (points) => {
                 Plugin.Logger.LogInfo($"Player {playerId} has {points} points.");
                 playerPoints[playerId] = (uint)points;
@@ -139,6 +117,29 @@ public class PointsManager : MonoBehaviour
         }
     }
 
+    public void GetPointsFromIdsList(List<ulong> playersIds, System.Action<Dictionary<ulong, uint>> onPointsRetrieved)
+    {
+        Dictionary<ulong, uint> loadedPoints = new Dictionary<ulong, uint>();
+        int remainingPlayers = playersIds.Count; // Counter to track how many players are left to retrieve
+
+        foreach (ulong playerId in playersIds)
+        {
+            GetSinglePlayerPoints(playerId, (remainingPoints) =>
+            {
+                loadedPoints[playerId] = remainingPoints; // Add player's points to the dictionary
+                remainingPlayers--; // Decrement the counter when a player's points are retrieved
+
+                // Check if all players' points have been loaded
+                if (remainingPlayers == 0)
+                {
+                    // Once all points are retrieved, invoke the callback with the results
+                    onPointsRetrieved?.Invoke(loadedPoints);
+                }
+            });
+        }
+    }
+
+
 
     // Coroutine for recharging points while playing
     public IEnumerator RechargingPoints()
@@ -147,12 +148,21 @@ public class PointsManager : MonoBehaviour
         {
             if (!isRechargingPaused && networkingManager.IsConnectedToServer){
                 yield return new WaitForSecondsRealtime(rechargeInterval);
+                
+                List<ulong> steamIds = new List<ulong>();
                 foreach (var player in ZeepkistNetwork.PlayerList)
                 {
-                    AddPoints(player.SteamID, rechargePoints);
+                    steamIds.Add(player.SteamID);
                 }
-                Plugin.Logger.LogInfo($"Recharging {rechargePoints} points each {rechargeInterval} seconds");
-                SaveData();
+                GetPointsFromIdsList(steamIds,(loadedPoints) => {
+                    foreach (var player in loadedPoints){
+                        AddPoints(player.Key, rechargePoints);
+                    }
+                    SaveAllPlayersPoints();
+                    Plugin.Logger.LogInfo($"Recharging {rechargePoints} points each {rechargeInterval} seconds");
+                });
+
+                
             }
             else
             {
@@ -176,9 +186,17 @@ public class PointsManager : MonoBehaviour
     }
 
 
-    public void SaveData()
+    public void SaveAllPlayersPoints()
     {
-        StartCoroutine(networkingManager.Save_Data_Server(playerPoints));
+        StartCoroutine(networkingManager.SavePointsFromDict(playerPoints));
+    }
+
+    public void SavePlayerPoints(ulong playerId)
+    {
+        if(playerPoints.TryGetValue(playerId,out uint points))
+        {
+            StartCoroutine(networkingManager.SaveSinglePlayerPoints(playerId,points));
+        }
     }
 
 

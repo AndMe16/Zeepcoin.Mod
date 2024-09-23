@@ -209,9 +209,12 @@ public class ChatCommandManager : MonoBehaviour
 
         // Adding the refunded points to player
         notificationManager.NotifyRefundingPlayerPoints(username,points,player.SteamID);
-        pointsManager.AddPoints(player.SteamID,points);
-        pointsManager.SaveData();
-    }
+        pointsManager.GetSinglePlayerPoints(player.SteamID, (remainingPoints) =>{
+            pointsManager.AddPoints(player.SteamID,points);
+            pointsManager.SavePlayerPoints(player.SteamID);
+        });
+        
+        }
 
 
     // Mixed commands
@@ -256,7 +259,7 @@ public class ChatCommandManager : MonoBehaviour
             return;
         }
         // Check remaining points
-        pointsManager.GetPoints(playerId, (remainingPoints) => {
+        pointsManager.GetSinglePlayerPoints(playerId, (remainingPoints) => {
             // Now you have the points after they were fetched (or defaulted in case of error)
             Plugin.Logger.LogInfo($"The player has {remainingPoints} points.");
             if (points>remainingPoints)
@@ -299,7 +302,7 @@ public class ChatCommandManager : MonoBehaviour
             return;
         }
         // Check remaining points
-        pointsManager.GetPoints(playerId, (remainingPoints) => {
+        pointsManager.GetSinglePlayerPoints(playerId, (remainingPoints) => {
             // Now you have the points after they were fetched (or defaulted in case of error)
             Plugin.Logger.LogInfo($"The player has {remainingPoints} points.");
             notificationManager.NotifyRemainingPoints(username,remainingPoints);    
