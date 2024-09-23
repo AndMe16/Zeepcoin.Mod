@@ -93,13 +93,15 @@ public class GameEventsManager : MonoBehaviour
         }
         else if (wasHost)
         {
-            predictionManager.StopPrediction();
+            if (predictionManager.PredictionActive)
+            {
+                predictionManager.StopPrediction();
+                notificationManager.NotifyHostLost();
+            }
             StopCoroutine(rechargePointsCoroutine);
             predictionManager.IsPaused = false;
             pointsManager.IsRechargingPaused = false;
             wasHost = false;
-            
-            notificationManager.NotifyHostLost();
         }
     }
 

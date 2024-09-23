@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Steamworks;
@@ -41,6 +42,8 @@ public class NetworkingManager : MonoBehaviour
     {
         set {savedData = value;}
     }
+
+    private string jwtToken;
 
     public async Task<bool> SetIsGlobalAsync(bool value)
     {
@@ -120,6 +123,16 @@ public class NetworkingManager : MonoBehaviour
                     }
                     isFirstCon = false;
                     isFirstDiscon = true;
+                    StartCoroutine(GetToken(SteamClient.SteamId.ToString(), 
+                            onTokenReceived: (token) => 
+                            {
+                                Plugin.Logger.LogInfo($"Received token");
+                                jwtToken = token;
+                            }, 
+                            onError: (error) => 
+                            {
+                                Plugin.Logger.LogError($"Failed to get token: {error}");
+                    }));
                 }
                 Plugin.Logger.LogInfo("Server is active, response: " + webRequest.downloadHandler.text);
                 isConnectedToServer = true;
@@ -197,11 +210,22 @@ public class NetworkingManager : MonoBehaviour
         using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
         {
             request.timeout = 10; 
-            byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(jsonData);
+            byte[] jsonToSend = new UTF8Encoding().GetBytes(jsonData);
             request.uploadHandler = new UploadHandlerRaw(jsonToSend);
             request.downloadHandler = new DownloadHandlerBuffer();
             request.SetRequestHeader("Content-Type", "application/json");
 
+            // Attach JWT token in the Authorization header
+            if (!string.IsNullOrEmpty(jwtToken))
+            {
+                request.SetRequestHeader("Authorization", jwtToken);
+            }
+            else
+            {
+                Debug.LogError("No JWT token available!");
+                yield break;
+            }
+            
             // Send the request and wait for the response
             yield return request.SendWebRequest();
 
@@ -301,6 +325,39 @@ public class NetworkingManager : MonoBehaviour
         ));
 
         return await tcs.Task;
+    }
+
+    public IEnumerator GetToken(string playerId, Action<string> onTokenReceived, Action<string> onError)
+    {
+        string url = $"{baseUrl}/login";
+        string jsonData = JsonConvert.SerializeObject(new { player_id = playerId });
+
+        using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
+        {
+            byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonData);
+            request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            request.downloadHandler = new DownloadHandlerBuffer();
+            request.SetRequestHeader("Content-Type", "application/json");
+
+            yield return request.SendWebRequest();
+
+            if (request.result == UnityWebRequest.Result.Success)
+            {
+                var response = JsonConvert.DeserializeObject<Dictionary<string, string>>(request.downloadHandler.text);
+                if (response.ContainsKey("token"))
+                {
+                    onTokenReceived(response["token"]);
+                }
+                else
+                {
+                    onError("Token not received");
+                }
+            }
+            else
+            {
+                onError($"Error fetching token: {request.error}");
+            }
+        }
     }
 
 
