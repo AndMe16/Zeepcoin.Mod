@@ -186,6 +186,11 @@ public class ChatCommandManager : MonoBehaviour
             notificationManager.NotifyNotConnectedToServer();
             return;
         }
+        if (networkingManager.IsGlobal)
+        {
+            notificationManager.NotifyRefundingWithGlobalDB();
+            return;
+        }
         // Check for both arguments
         string[] arguments = argument.Split(" ");
         if(arguments.Length <= 1){

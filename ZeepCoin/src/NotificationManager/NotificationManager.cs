@@ -43,6 +43,12 @@ public class NotificationManager : MonoBehaviour
         ChatApi.AddLocalMessage("<i>Currently you are not connected to the server, wait 1 minute before starting a prediction again</i>");
     }
 
+    public void NotifyRefundingWithGlobalDB()
+    {
+        Plugin.Logger.LogInfo("Trying to refund points while using the global database");
+        ChatApi.AddLocalMessage("<i>You can only use this command while using the host's specific database!</i>");
+    }
+
     public void NotifyExceedingCoinTime(){
         ChatApi.AddLocalMessage("<i>Time exceeded 24 hours! Max 86399 seconds</i>");
         Plugin.Logger.LogInfo("Time exceeded 24 hours!");
@@ -176,10 +182,9 @@ public class NotificationManager : MonoBehaviour
             }
             else
             {
-                MessengerApi.Log("Using the host database", 5);
                 Color textColor = new Color(1, 1, 1);
                 Color backgroundColor = new Color((float)112/255, 1, (float)93/255, (float)0.7);
-                MessengerApi.LogCustomColors("[ZeepCoin] Using host's specific database", textColor,backgroundColor,2.5f);
+                MessengerApi.LogCustomColors($"[ZeepCoin] Using host's specific database ({SteamClient.Name} DB)", textColor,backgroundColor,2.5f);
             }
     }
 }

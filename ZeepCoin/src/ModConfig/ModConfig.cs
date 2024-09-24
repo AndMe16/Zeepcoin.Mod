@@ -17,7 +17,7 @@ public class ModConfig : MonoBehaviour
     public static bool changedFromDatabase = false; 
 
     private static readonly int localRechargePoints= 10;
-    private static readonly int localRechargeInterval = 300;
+    private static readonly int localRechargeInterval = 900;
     private static readonly int localDefaultPoints = 1000;
 
     // Constructor that takes a ConfigFile instance from the main class
