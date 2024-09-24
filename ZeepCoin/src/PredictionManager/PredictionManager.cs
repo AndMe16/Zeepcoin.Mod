@@ -9,11 +9,6 @@ using ZeepCoin;
 public class PredictionManager : MonoBehaviour
 {
 
-    // Event to notify when the prediction starts and ends
-    public static event Action OnPredictionStarted;
-    public static event Action OnPredictionEnded;
-    public static event Action OnPredictionStoped;
-    
     // Control variables
     private bool predictionActive = false;
     public bool PredictionActive
@@ -67,9 +62,6 @@ public class PredictionManager : MonoBehaviour
         voteOrder.Clear();
         serverMessageManager.ClearServerMessageVars();
 
-        // Notify listeners that prediction has started
-        OnPredictionStarted?.Invoke();
-
         // Start the countdown timer and the servermessage
         timeLeft = predictionDuration;
         serverMessageManager.UpdatePredictionBar();
@@ -112,7 +104,6 @@ public class PredictionManager : MonoBehaviour
     public void EndPrediction()
     {
         predictionActive = false;
-        networkingManager.SavedData = false;
         // Get total predicted points
         ulong totalPredictedPoints = TotalPredictedPoints(out ulong totalHeadsPoints, out ulong totalTailsPoints);
 
@@ -128,9 +119,6 @@ public class PredictionManager : MonoBehaviour
         // Generate a random result (either "heads" or "tails")
         result = UnityEngine.Random.value > 0.5f ? "heads" : "tails";
         Plugin.Logger.LogInfo("Coinflip result: " + result);
-
-        // Notify listeners that prediction has ended
-        OnPredictionEnded?.Invoke();
 
         // Process the results and update points
         CalculateRatios(totalHeadsPoints, totalTailsPoints, out double heads_ratio, out double tails_ratio);
@@ -177,11 +165,9 @@ public class PredictionManager : MonoBehaviour
 
     public void StopPrediction()
     {
-        StopCoroutine(PredictionCountdownCoroutine);
-        networkingManager.SavedData = false;
-        RefundPredictedPlayersPoints();
         predictionActive = false;
-        OnPredictionStoped?.Invoke();
+        StopCoroutine(PredictionCountdownCoroutine);
+        RefundPredictedPlayersPoints();
         serverMessageManager.ShowStopServerMessage();
     }
 

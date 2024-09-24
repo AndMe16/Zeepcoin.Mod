@@ -13,6 +13,10 @@ using ZeepSDK.Messaging;
 public class NetworkingManager : MonoBehaviour
 {
 
+    private PredictionManager predictionManager;
+    private PointsManager pointsManager;
+    private NotificationManager notificationManager;
+
     private bool isFirstCon = true;
 
     public bool IsFirstCon
@@ -36,12 +40,13 @@ public class NetworkingManager : MonoBehaviour
 
     private bool isGlobal;
 
-    private bool savedData = false;
-
-    public bool SavedData
+    public bool IsGlobal
     {
-        set {savedData = value;}
+        get {return isGlobal;}
     }
+
+    private bool savedData = true;
+
 
     private string jwtToken;
 
@@ -58,6 +63,7 @@ public class NetworkingManager : MonoBehaviour
             {
                 ModConfig.LoadConfigValues();
             }
+            notificationManager.NotifyTypeOfDB(isGlobal);
         }
         else
         {
@@ -69,8 +75,7 @@ public class NetworkingManager : MonoBehaviour
 
     private Coroutine pingServerCoroutine;
 
-    private PredictionManager predictionManager;
-    private PointsManager pointsManager;
+   
 
     // Server
     private readonly string baseUrl = "https://zeep-coin.onrender.com";
@@ -94,6 +99,7 @@ public class NetworkingManager : MonoBehaviour
         isGlobal = ModConfig.useGlobalDatabase.Value;
         predictionManager = FindObjectOfType<PredictionManager>();
         pointsManager = FindObjectOfType<PointsManager>();
+        notificationManager = FindObjectOfType<NotificationManager>();
     }
 
     private IEnumerator PingServerRoutine()
@@ -212,7 +218,7 @@ public class NetworkingManager : MonoBehaviour
     public IEnumerator SaveSinglePlayerPoints(ulong playerId, uint points)
     {
         Plugin.Logger.LogInfo($"Saving data for player {playerId} to server");
-
+        savedData = false;
         // Define the URL based on whether it's global or host-specific points
         string url = isGlobal 
             ? $"{baseUrl}/points/global/player/{playerId}" 
@@ -238,18 +244,18 @@ public class NetworkingManager : MonoBehaviour
             else
             {
                 Debug.LogError("No JWT token available!");
+                savedData = true;
                 yield break;
             }
             
             // Send the request and wait for the response
             yield return request.SendWebRequest();
-
+            savedData = true;
             if (request.result == UnityWebRequest.Result.Success)
             {
 
                 Plugin.Logger.LogInfo("Points data saved successfully.");
                 //MessengerApi.LogSuccess("All player's points saved successfully!");
-                savedData = true;
             }
             else
             {
@@ -263,7 +269,7 @@ public class NetworkingManager : MonoBehaviour
     public IEnumerator SavePointsFromDict(Dictionary<ulong, uint> totalPointsDataDictionary)
     {
         Plugin.Logger.LogInfo("Saving data from dictionary to server");
-
+        savedData = false;
         // Define the URL based on whether it's global or host-specific points
         string url = isGlobal 
             ? $"{baseUrl}/points/global" 
@@ -288,18 +294,18 @@ public class NetworkingManager : MonoBehaviour
             else
             {
                 Debug.LogError("No JWT token available!");
+                savedData = true;
                 yield break;
             }
             
             // Send the request and wait for the response
             yield return request.SendWebRequest();
-
+            savedData = true;
             if (request.result == UnityWebRequest.Result.Success)
             {
 
                 Plugin.Logger.LogInfo("Data points saved successfully.");
                 //MessengerApi.LogSuccess("All player's points saved successfully!");
-                savedData = true;
             }
             else
             {
@@ -313,11 +319,12 @@ public class NetworkingManager : MonoBehaviour
 
     private async Task<bool> WaitForConditionAsync()
     {
-        while (predictionManager.PredictionActive && savedData)
+        while (predictionManager.PredictionActive || !savedData)
         {
+            //Plugin.Logger.LogInfo($"Waiting for the conditions to change PredictionActive: {predictionManager.PredictionActive} savedData:{savedData}");
             await Task.Delay(1000);  
         }
-
+        Plugin.Logger.LogInfo($"Not longer waiting for the conditions: {predictionManager.PredictionActive} savedData:{savedData}");
         return true;  
     }
 

@@ -144,7 +144,7 @@ public class ModConfig : MonoBehaviour
         if (string.IsNullOrEmpty(error))
         {
             changedFromDatabase = true;
-            Plugin.Logger.LogInfo($"Recharge Points: {rechargePoints}, Recharge Interval: {rechargeInterval}, Default Points: {defaultPoints}");
+            Plugin.Logger.LogInfo($"Recharge Points: {rechargePoints_}, Recharge Interval: {rechargeInterval_}, Default Points: {defaultPoints_}");
             rechargePoints.Value = rechargePoints_;
             rechargeInterval.Value = rechargeInterval_;
             defaultPoints.Value = defaultPoints_;

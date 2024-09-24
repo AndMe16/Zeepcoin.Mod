@@ -2,6 +2,7 @@ using Steamworks;
 using UnityEngine;
 using ZeepCoin;
 using ZeepSDK.Chat;
+using ZeepSDK.Messaging;
 
 public class NotificationManager : MonoBehaviour
 {
@@ -164,5 +165,21 @@ public class NotificationManager : MonoBehaviour
         ChatApi.AddLocalMessage("<i>You lost host during the prediction! Prediction stoped.</i>");
         ChatApi.SendMessage($" {SteamClient.Name} lost host during the prediction! All the points will be refunded");
         Plugin.Logger.LogInfo("Ending Prediction because of host lost");
+    }
+
+    public void NotifyTypeOfDB(bool isGlobal){
+        if (isGlobal)
+            {
+                Color textColor = new Color(1, 1, 1);
+                Color backgroundColor = new Color((float)79/255, (float)238/255, 1, (float)0.7);
+                MessengerApi.LogCustomColors("[ZeepCoin] Using global database", textColor, backgroundColor, 2.5f);
+            }
+            else
+            {
+                MessengerApi.Log("Using the host database", 5);
+                Color textColor = new Color(1, 1, 1);
+                Color backgroundColor = new Color((float)112/255, 1, (float)93/255, (float)0.7);
+                MessengerApi.LogCustomColors("[ZeepCoin] Using host's specific database", textColor,backgroundColor,2.5f);
+            }
     }
 }

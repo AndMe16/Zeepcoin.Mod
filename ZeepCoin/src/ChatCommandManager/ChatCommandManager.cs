@@ -73,6 +73,7 @@ public class ChatCommandManager : MonoBehaviour
         // Start the prediction with the specified duration
         predictionManager.StartPrediction(duration);
         notificationManager.NotifyStartingPrediction(duration);
+        notificationManager.NotifyTypeOfDB(networkingManager.IsGlobal);
     }
 
 
