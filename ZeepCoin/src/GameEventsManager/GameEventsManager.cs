@@ -74,13 +74,15 @@ public class GameEventsManager : MonoBehaviour
 
     private void OnRoundEnded()
     {
-        if (ZeepkistNetwork.LocalPlayerHasHostPowers())
-        { 
-            if (predictionManager.PredictionActive){
-                predictionManager.PauseCountdown();
-            }
-            if (pointsManager.IsRechargingPaused == false){
-                pointsManager.PauseRecharge();
+        if (MultiplayerApi.IsPlayingOnline){
+            if (ZeepkistNetwork.LocalPlayerHasHostPowers())
+            { 
+                if (predictionManager.PredictionActive){
+                    predictionManager.PauseCountdown();
+                }
+                if (pointsManager.IsRechargingPaused == false){
+                    pointsManager.PauseRecharge();
+                }
             }
         }
     }
