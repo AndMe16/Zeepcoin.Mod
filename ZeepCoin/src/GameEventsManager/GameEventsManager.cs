@@ -55,17 +55,19 @@ public class GameEventsManager : MonoBehaviour
     private void OnLevelLoaded()
     {
         Plugin.Logger.LogInfo("Level Loaded");
-        if (ZeepkistNetwork.LocalPlayerHasHostPowers())
-        {   
-            if (predictionManager.PredictionActive){
-                predictionManager.ResumeCountdown();
-            }
+        if (MultiplayerApi.IsPlayingOnline){
+            if (ZeepkistNetwork.LocalPlayerHasHostPowers())
+            {   
+                if (predictionManager.PredictionActive){
+                    predictionManager.ResumeCountdown();
+                }
 
-            if (pointsManager.IsRechargingPaused == false){
-                rechargePointsCoroutine = StartCoroutine(pointsManager.RechargingPoints());
-            }
-            else{
-                pointsManager.ResumeRecharge();
+                if (pointsManager.IsRechargingPaused == false){
+                    rechargePointsCoroutine = StartCoroutine(pointsManager.RechargingPoints());
+                }
+                else{
+                    pointsManager.ResumeRecharge();
+                }
             }
         }
     }
