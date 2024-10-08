@@ -4,7 +4,7 @@ using UnityEngine;
 using ZeepCoin;
 using ZeepSDK.Chat;
 
-public class ServerMessageManager : MonoBehaviour
+public class Coin_ServerMessageManager : MonoBehaviour
 {
     private string serverMessage;
     private string predictionBar;
@@ -19,14 +19,14 @@ public class ServerMessageManager : MonoBehaviour
     private int rechargePoints;
     private int rechargeInterval; 
 
-    private PredictionManager predictionManager;
+    private Coin_PredictionManager predictionManager;
 
 
     void Start()
     {
-        predictionManager = FindObjectOfType<PredictionManager>();
-        rechargePoints = ModConfig.rechargePoints.Value;
-        rechargeInterval = ModConfig.rechargeInterval.Value;
+        predictionManager = FindObjectOfType<Coin_PredictionManager>();
+        rechargePoints = Coin_ModConfig.rechargePoints.Value;
+        rechargeInterval = Coin_ModConfig.rechargeInterval.Value;
 
     }
 
@@ -154,8 +154,8 @@ public class ServerMessageManager : MonoBehaviour
     
     public void UpdateRechargeInfo()
     {
-        rechargePoints = ModConfig.rechargePoints.Value;
-        rechargeInterval = ModConfig.rechargeInterval.Value;
+        rechargePoints = Coin_ModConfig.rechargePoints.Value;
+        rechargeInterval = Coin_ModConfig.rechargeInterval.Value;
     }
 
     public void ClearServerMessageVars(){

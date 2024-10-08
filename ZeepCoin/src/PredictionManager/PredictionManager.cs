@@ -6,7 +6,7 @@ using ZeepCoin;
 
 
 
-public class PredictionManager : MonoBehaviour
+public class Coin_PredictionManager : MonoBehaviour
 {
 
     // Control variables
@@ -36,19 +36,19 @@ public class PredictionManager : MonoBehaviour
     // The result of the coin flip ("heads" or "tails")
     private string result;
 
-    private ServerMessageManager serverMessageManager;
-    private PointsManager pointsManager;
-    private NotificationManager notificationManager;
-    private NetworkingManager networkingManager;
+    private Coin_ServerMessageManager serverMessageManager;
+    private Coin_PointsManager pointsManager;
+    private Coin_NotificationManager notificationManager;
+    private Coin_NetworkingManager networkingManager;
 
     private Coroutine PredictionCountdownCoroutine;
 
     void Start()
     {
-        serverMessageManager = FindObjectOfType<ServerMessageManager>();
-        pointsManager = FindObjectOfType<PointsManager>();
-        notificationManager = FindObjectOfType<NotificationManager>();
-        networkingManager = FindObjectOfType<NetworkingManager>();
+        serverMessageManager = FindObjectOfType<Coin_ServerMessageManager>();
+        pointsManager = FindObjectOfType<Coin_PointsManager>();
+        notificationManager = FindObjectOfType<Coin_NotificationManager>();
+        networkingManager = FindObjectOfType<Coin_NetworkingManager>();
     }
 
 

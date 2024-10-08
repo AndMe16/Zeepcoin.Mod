@@ -4,11 +4,11 @@ using ZeepSDK.Messaging;
 
 namespace ZeepCoin;
 
-public class ModConfig : MonoBehaviour
+public class Coin_ModConfig : MonoBehaviour
 {
-    private static PointsManager pointsManager;
-    private static ServerMessageManager serverMessageManager;
-    private static NetworkingManager networkingManager;
+    private static Coin_PointsManager pointsManager;
+    private static Coin_ServerMessageManager serverMessageManager;
+    private static Coin_NetworkingManager networkingManager;
     public static ConfigEntry<bool> useGlobalDatabase;
     public static ConfigEntry<int> rechargePoints;
     public static ConfigEntry<int> rechargeInterval;
@@ -49,9 +49,9 @@ public class ModConfig : MonoBehaviour
         rechargeInterval.SettingChanged += OnSettingsChanged;
         defaultPoints.SettingChanged += OnSettingsChanged;
 
-        pointsManager = FindObjectOfType<PointsManager>();
-        serverMessageManager = FindObjectOfType<ServerMessageManager>();
-        networkingManager = FindObjectOfType<NetworkingManager>();
+        pointsManager = FindObjectOfType<Coin_PointsManager>();
+        serverMessageManager = FindObjectOfType<Coin_ServerMessageManager>();
+        networkingManager = FindObjectOfType<Coin_NetworkingManager>();
     }
 
 

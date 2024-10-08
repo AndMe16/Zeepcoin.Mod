@@ -12,7 +12,7 @@ public class Plugin : BaseUnityPlugin
     private Harmony harmony;
     internal static new ManualLogSource Logger;
 
-    public static ModConfig modConfig;
+    public static Coin_ModConfig modConfig;
 
     private void Awake()
     {
@@ -21,16 +21,16 @@ public class Plugin : BaseUnityPlugin
         harmony = new Harmony("andme123.zeepcoin");
         harmony.PatchAll();
         Logger.LogInfo($"Plugin {"andme123.zeepcoin"} is loaded!");
-        ModConfig.Initialize(Config);
-        gameObject.AddComponent<PointsManager>();
-        gameObject.AddComponent<NotificationManager>();
-        gameObject.AddComponent<ServerMessageManager>();
-        gameObject.AddComponent<PlayerInfoManager>();
-        gameObject.AddComponent<ChatCommandManager>();
-        gameObject.AddComponent<PredictionManager>();
-        gameObject.AddComponent<GameEventsManager>();
-        gameObject.AddComponent<ModConfig>();
-        gameObject.AddComponent<NetworkingManager>();
+        Coin_ModConfig.Initialize(Config);
+        gameObject.AddComponent<Coin_PointsManager>();
+        gameObject.AddComponent<Coin_NotificationManager>();
+        gameObject.AddComponent<Coin_ServerMessageManager>();
+        gameObject.AddComponent<Coin_PlayerInfoManager>();
+        gameObject.AddComponent<Coin_ChatCommandManager>();
+        gameObject.AddComponent<Coin_PredictionManager>();
+        gameObject.AddComponent<Coin_GameEventsManager>();
+        gameObject.AddComponent<Coin_ModConfig>();
+        gameObject.AddComponent<Coin_NetworkingManager>();
     }
 
 

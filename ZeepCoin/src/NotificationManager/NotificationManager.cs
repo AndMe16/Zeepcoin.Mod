@@ -4,7 +4,7 @@ using ZeepCoin;
 using ZeepSDK.Chat;
 using ZeepSDK.Messaging;
 
-public class NotificationManager : MonoBehaviour
+public class Coin_NotificationManager : MonoBehaviour
 {
     public void NotifyNotHost()
     {

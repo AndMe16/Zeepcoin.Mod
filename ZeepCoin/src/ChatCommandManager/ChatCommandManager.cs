@@ -4,22 +4,22 @@ using ZeepCoin;
 using ZeepkistClient;
 using ZeepSDK.ChatCommands;
 
-public class ChatCommandManager : MonoBehaviour
+public class Coin_ChatCommandManager : MonoBehaviour
 {
 
-    private PredictionManager predictionManager;
-    private NotificationManager notificationManager;
-    private PlayerInfoManager playerInfoManager;
-    private PointsManager pointsManager;
-    private NetworkingManager networkingManager;
+    private Coin_PredictionManager predictionManager;
+    private Coin_NotificationManager notificationManager;
+    private Coin_PlayerInfoManager playerInfoManager;
+    private Coin_PointsManager pointsManager;
+    private Coin_NetworkingManager networkingManager;
 
     void Start()
     {
-        predictionManager = FindObjectOfType<PredictionManager>();
-        notificationManager = FindObjectOfType<NotificationManager>();
-        playerInfoManager = FindObjectOfType<PlayerInfoManager>();
-        pointsManager = FindObjectOfType<PointsManager>();
-        networkingManager = FindObjectOfType<NetworkingManager>();
+        predictionManager = FindObjectOfType<Coin_PredictionManager>();
+        notificationManager = FindObjectOfType<Coin_NotificationManager>();
+        playerInfoManager = FindObjectOfType<Coin_PlayerInfoManager>();
+        pointsManager = FindObjectOfType<Coin_PointsManager>();
+        networkingManager = FindObjectOfType<Coin_NetworkingManager>();
 
         // Local commands
         ChatCommandApi.RegisterLocalChatCommand("/", "coinstart", "<duration in seconds>. Starts a new prediction", OnStartPredictionCommand);

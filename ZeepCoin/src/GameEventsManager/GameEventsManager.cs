@@ -4,12 +4,12 @@ using ZeepkistClient;
 using ZeepSDK.Multiplayer;
 using ZeepSDK.Racing;
 
-public class GameEventsManager : MonoBehaviour
+public class Coin_GameEventsManager : MonoBehaviour
 {
-    private PointsManager pointsManager;
-    private PredictionManager predictionManager;
-    private NotificationManager notificationManager;
-    private NetworkingManager networkingManager;
+    private Coin_PointsManager pointsManager;
+    private Coin_PredictionManager predictionManager;
+    private Coin_NotificationManager notificationManager;
+    private Coin_NetworkingManager networkingManager;
 
     private Coroutine rechargePointsCoroutine;
     
@@ -18,10 +18,10 @@ public class GameEventsManager : MonoBehaviour
 
     void Start()
     {
-        pointsManager = FindObjectOfType<PointsManager>();
-        predictionManager = FindObjectOfType<PredictionManager>();
-        notificationManager = FindObjectOfType<NotificationManager>();
-        networkingManager = FindObjectOfType<NetworkingManager>();
+        pointsManager = FindObjectOfType<Coin_PointsManager>();
+        predictionManager = FindObjectOfType<Coin_PredictionManager>();
+        notificationManager = FindObjectOfType<Coin_NotificationManager>();
+        networkingManager = FindObjectOfType<Coin_NetworkingManager>();
 
         MultiplayerApi.DisconnectedFromGame += OnDisconnectedFromGame;
         RacingApi.LevelLoaded += OnLevelLoaded;

@@ -4,7 +4,7 @@ using Steamworks;
 using UnityEngine;
 using ZeepkistClient;
 
-public class PlayerInfoManager : MonoBehaviour
+public class Coin_PlayerInfoManager : MonoBehaviour
 {
     public string GetPlayerUsername(bool isLocal, ulong playerId, out ulong playerId_out)
     {

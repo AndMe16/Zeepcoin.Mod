@@ -10,12 +10,12 @@ using UnityEngine.Networking;
 using ZeepCoin;
 using ZeepSDK.Messaging;
 
-public class NetworkingManager : MonoBehaviour
+public class Coin_NetworkingManager : MonoBehaviour
 {
 
-    private PredictionManager predictionManager;
-    private PointsManager pointsManager;
-    private NotificationManager notificationManager;
+    private Coin_PredictionManager predictionManager;
+    private Coin_PointsManager pointsManager;
+    private Coin_NotificationManager notificationManager;
 
     private bool isFirstCon = true;
 
@@ -61,7 +61,7 @@ public class NetworkingManager : MonoBehaviour
             Plugin.Logger.LogInfo($"IsGlobal has been updated to: {value}");
             if (isGlobal)
             {
-                ModConfig.LoadConfigValues();
+                Coin_ModConfig.LoadConfigValues();
             }
             notificationManager.NotifyTypeOfDB(isGlobal);
         }
@@ -96,10 +96,10 @@ public class NetworkingManager : MonoBehaviour
 
     void Start()
     {
-        isGlobal = ModConfig.useGlobalDatabase.Value;
-        predictionManager = FindObjectOfType<PredictionManager>();
-        pointsManager = FindObjectOfType<PointsManager>();
-        notificationManager = FindObjectOfType<NotificationManager>();
+        isGlobal = Coin_ModConfig.useGlobalDatabase.Value;
+        predictionManager = FindObjectOfType<Coin_PredictionManager>();
+        pointsManager = FindObjectOfType<Coin_PointsManager>();
+        notificationManager = FindObjectOfType<Coin_NotificationManager>();
     }
 
     private IEnumerator PingServerRoutine()
@@ -139,7 +139,7 @@ public class NetworkingManager : MonoBehaviour
                     MessengerApi.LogSuccess("Connected to the Coin Server!");
                     if (isGlobal)
                     {
-                        ModConfig.LoadConfigValues();
+                        Coin_ModConfig.LoadConfigValues();
                     }
                     isFirstCon = false;
                     isFirstDiscon = true;

@@ -5,10 +5,10 @@ using UnityEngine;
 using ZeepCoin;
 using ZeepkistClient;
 
-public class PointsManager : MonoBehaviour
+public class Coin_PointsManager : MonoBehaviour
 {
 
-    private NetworkingManager networkingManager;
+    private Coin_NetworkingManager networkingManager;
 
     private uint defaultInitialPoints;
 
@@ -46,11 +46,11 @@ public class PointsManager : MonoBehaviour
     // Initialize the values in Start to ensure ModConfig is ready
     private void Start()
     {
-        defaultInitialPoints = (uint)ModConfig.defaultPoints.Value;
-        rechargeInterval = ModConfig.rechargeInterval.Value;
-        rechargePoints = (uint)ModConfig.rechargePoints.Value;
+        defaultInitialPoints = (uint)Coin_ModConfig.defaultPoints.Value;
+        rechargeInterval = Coin_ModConfig.rechargeInterval.Value;
+        rechargePoints = (uint)Coin_ModConfig.rechargePoints.Value;
 
-        networkingManager = FindObjectOfType<NetworkingManager>();
+        networkingManager = FindObjectOfType<Coin_NetworkingManager>();
     }
 
     // Add points to a player
