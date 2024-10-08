@@ -39,7 +39,7 @@ public class ChatCommandManager : MonoBehaviour
     private void OnStartPredictionCommand(string arguments)
     {
         // Check for host
-        if (!ZeepkistNetwork.LocalPlayerHasHostPowers())
+        if (!ZeepkistNetwork.IsMasterClient)
         {
             notificationManager.NotifyNotHost();
             return;
@@ -80,7 +80,7 @@ public class ChatCommandManager : MonoBehaviour
     private void OnStopPredictionCommand(string arguments)
     {
         // Check for host
-        if (!ZeepkistNetwork.LocalPlayerHasHostPowers())
+        if (!ZeepkistNetwork.IsMasterClient)
         {
             notificationManager.NotifyNotHost();
             return;
@@ -103,7 +103,7 @@ public class ChatCommandManager : MonoBehaviour
     private void OnAddCommandCommand(string arguments)
     {
         // Check for host
-        if (!ZeepkistNetwork.LocalPlayerHasHostPowers())
+        if (!ZeepkistNetwork.IsMasterClient)
         {
             notificationManager.NotifyNotHost();
             return;
@@ -137,7 +137,7 @@ public class ChatCommandManager : MonoBehaviour
     private void OnSetCommandCommand(string arguments)
     {
         // Check for host
-        if (!ZeepkistNetwork.LocalPlayerHasHostPowers())
+        if (!ZeepkistNetwork.IsMasterClient)
         {
             notificationManager.NotifyNotHost();
             return;
@@ -172,7 +172,7 @@ public class ChatCommandManager : MonoBehaviour
     private void OnCoinRefundCommand(string argument)
     {
         // Check for host
-        if (!ZeepkistNetwork.LocalPlayerHasHostPowers())
+        if (!ZeepkistNetwork.IsMasterClient)
         {
             notificationManager.NotifyNotHost();
             return;
@@ -235,7 +235,7 @@ public class ChatCommandManager : MonoBehaviour
 
     private void HandleHeadsTailsCommand(bool isLocal,ulong playerId, string arguments, string command)
     {
-        if (!ZeepkistNetwork.LocalPlayerHasHostPowers()) return;
+        if (!ZeepkistNetwork.IsMasterClient) return;
 
         // Get player username
         string username = playerInfoManager.GetPlayerUsername(isLocal,playerId,out playerId);
@@ -292,7 +292,7 @@ public class ChatCommandManager : MonoBehaviour
     }
      private void OnCoinpointsCommand(bool isLocal, ulong playerId, string arguments)
     {
-        if (!ZeepkistNetwork.LocalPlayerHasHostPowers()) return;
+        if (!ZeepkistNetwork.IsMasterClient) return;
 
         // Get player username
         string username = playerInfoManager.GetPlayerUsername(isLocal,playerId,out playerId);

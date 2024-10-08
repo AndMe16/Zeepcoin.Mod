@@ -47,16 +47,14 @@ public class GameEventsManager : MonoBehaviour
             predictionManager.IsPaused = false;
             pointsManager.IsRechargingPaused = false;
             wasHost = false;
-            
         }
-        
     }
 
     private void OnLevelLoaded()
     {
         Plugin.Logger.LogInfo("Level Loaded");
         if (MultiplayerApi.IsPlayingOnline){
-            if (ZeepkistNetwork.LocalPlayerHasHostPowers())
+            if (ZeepkistNetwork.IsMasterClient)
             {   
                 if (predictionManager.PredictionActive){
                     predictionManager.ResumeCountdown();
@@ -75,7 +73,7 @@ public class GameEventsManager : MonoBehaviour
     private void OnRoundEnded()
     {
         if (MultiplayerApi.IsPlayingOnline){
-            if (ZeepkistNetwork.LocalPlayerHasHostPowers())
+            if (ZeepkistNetwork.IsMasterClient)
             { 
                 if (predictionManager.PredictionActive){
                     predictionManager.PauseCountdown();
