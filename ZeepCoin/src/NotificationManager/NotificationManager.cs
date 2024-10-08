@@ -22,7 +22,7 @@ public class Coin_NotificationManager : MonoBehaviour
     public void NotifyInvalidCoinArguments()
     {
         Plugin.Logger.LogInfo("Invalid duration.");
-        ChatApi.AddLocalMessage("<i>Specify the duration of the prediction in seconds! eg. !coinstart 60</i>");
+        ChatApi.AddLocalMessage("<i>Specify the duration of the prediction in seconds! eg. /coinstart 60</i>");
     }
 
     public void NotifyCoinOutsideRound()
@@ -68,7 +68,7 @@ public class Coin_NotificationManager : MonoBehaviour
 
     public void NotifyInvalidAddArguments(){
         Plugin.Logger.LogInfo("Invalid duration.");
-        ChatApi.AddLocalMessage("<i>Invalid duration. Please provide a valid amount of seconds you want to add, positive or negative! eg. !coinadd 60 or !coinadd -137</i>");
+        ChatApi.AddLocalMessage("<i>Invalid duration. Please provide a valid amount of seconds you want to add, positive or negative! eg. /coinaddtime 60 or /coinaddtime -137</i>");
     }
 
     public void NotifyModPredictionTime(int added_duration)
