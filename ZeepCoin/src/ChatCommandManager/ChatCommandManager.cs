@@ -1,6 +1,5 @@
-using Steamworks;
 using UnityEngine;
-using ZeepCoin;
+using ZeepCoin.src;
 using ZeepkistClient;
 using ZeepSDK.ChatCommands;
 
@@ -13,7 +12,9 @@ public class Coin_ChatCommandManager : MonoBehaviour
     private Coin_PointsManager pointsManager;
     private Coin_NetworkingManager networkingManager;
 
+#pragma warning disable IDE0051 // Remove unused private members
     void Start()
+#pragma warning restore IDE0051 // Remove unused private members
     {
         predictionManager = FindObjectOfType<Coin_PredictionManager>();
         notificationManager = FindObjectOfType<Coin_NotificationManager>();
@@ -45,27 +46,29 @@ public class Coin_ChatCommandManager : MonoBehaviour
             return;
         }
         // Check for command outside game round
-        if (!(ZeepkistNetwork.CurrentLobby.GameState==0)){
+        if (!(ZeepkistNetwork.CurrentLobby.GameState == 0))
+        {
             notificationManager.NotifyCoinOutsideRound();
             return;
         }
         // Check for active prediction
-        if (predictionManager.PredictionActive){
+        if (predictionManager.PredictionActive)
+        {
             notificationManager.NotifyOngoingPrediction();
             return;
         }
-        if (!networkingManager.IsConnectedToServer){
+        if (!networkingManager.IsConnectedToServer)
+        {
             notificationManager.NotifyNotConnectedToServer();
             return;
         }
         // Try to parse the duration from the arguments
-        uint duration;
-        if (!uint.TryParse(arguments, out duration) || (duration<=0))
+        if (!uint.TryParse(arguments, out uint duration) || (duration <= 0))
         {
             notificationManager.NotifyInvalidCoinArguments();
             return;
         }
-        if (duration>(60*60*24)-1) // Max 23:59:59
+        if (duration > (60 * 60 * 24) - 1) // Max 23:59:59
         {
             notificationManager.NotifyExceedingCoinTime();
             return;
@@ -86,18 +89,20 @@ public class Coin_ChatCommandManager : MonoBehaviour
             return;
         }
         // Check for command outside game round
-        if (!(ZeepkistNetwork.CurrentLobby.GameState==0)){
+        if (!(ZeepkistNetwork.CurrentLobby.GameState == 0))
+        {
             notificationManager.NotifyCoinOutsideRound();
             return;
         }
         // Check for active prediction
-        if (!predictionManager.PredictionActive){
+        if (!predictionManager.PredictionActive)
+        {
             notificationManager.NotifyNotOngoingPrediction();
             return;
         }
         // Stop the prediction
         predictionManager.StopPrediction();
-        notificationManager.NotifyStopingPrediction(SteamClient.Name);
+        notificationManager.NotifyStopingPrediction();
     }
 
     private void OnAddCommandCommand(string arguments)
@@ -109,22 +114,23 @@ public class Coin_ChatCommandManager : MonoBehaviour
             return;
         }
         // Check for command outside game round
-        if (!(ZeepkistNetwork.CurrentLobby.GameState==0)){
+        if (!(ZeepkistNetwork.CurrentLobby.GameState == 0))
+        {
             notificationManager.NotifyCoinOutsideRound();
             return;
         }
         // Check for active prediction
-        if (!predictionManager.PredictionActive){
+        if (!predictionManager.PredictionActive)
+        {
             notificationManager.NotifyNotOngoingPrediction();
             return;
         }
-        int added_duration;
-        if (!int.TryParse(arguments, out added_duration) || (added_duration==0))
+        if (!int.TryParse(arguments, out int added_duration) || (added_duration == 0))
         {
             notificationManager.NotifyInvalidAddArguments();
             return;
         }
-        if (predictionManager.PredictionDuration + added_duration>(60*60*24)-1) // Max 23:59:59
+        if (predictionManager.PredictionDuration + added_duration > (60 * 60 * 24) - 1) // Max 23:59:59
         {
             notificationManager.NotifyExceedingCoinTime();
             return;
@@ -143,23 +149,24 @@ public class Coin_ChatCommandManager : MonoBehaviour
             return;
         }
         // Check for command outside game round
-        if (!(ZeepkistNetwork.CurrentLobby.GameState==0)){
+        if (!(ZeepkistNetwork.CurrentLobby.GameState == 0))
+        {
             notificationManager.NotifyCoinOutsideRound();
             return;
         }
         // Check for active prediction
-        if (!predictionManager.PredictionActive){
+        if (!predictionManager.PredictionActive)
+        {
             notificationManager.NotifyNotOngoingPrediction();
             return;
         }
         // Try to parse the duration from the arguments
-        uint duration;
-        if (!uint.TryParse(arguments, out duration) || (duration<=0))
+        if (!uint.TryParse(arguments, out uint duration) || (duration <= 0))
         {
             notificationManager.NotifyInvalidCoinArguments();
             return;
         }
-        if (duration>(60*60*24)-1) // Max 23:59:59
+        if (duration > (60 * 60 * 24) - 1) // Max 23:59:59
         {
             notificationManager.NotifyExceedingCoinTime();
             return;
@@ -178,11 +185,13 @@ public class Coin_ChatCommandManager : MonoBehaviour
             return;
         }
         // Check for command outside game round
-        if (!(ZeepkistNetwork.CurrentLobby.GameState==0)){
+        if (!(ZeepkistNetwork.CurrentLobby.GameState == 0))
+        {
             notificationManager.NotifyCoinOutsideRound();
             return;
         }
-        if (!networkingManager.IsConnectedToServer){
+        if (!networkingManager.IsConnectedToServer)
+        {
             notificationManager.NotifyNotConnectedToServer();
             return;
         }
@@ -193,55 +202,58 @@ public class Coin_ChatCommandManager : MonoBehaviour
         }
         // Check for both arguments
         string[] arguments = argument.Split(" ");
-        if(arguments.Length <= 1){
+        if (arguments.Length <= 1)
+        {
             notificationManager.NotifyRefundMissingArguments(arguments);
             return;
         }
-        
+
         string points_str = arguments[0];
         string username = arguments[1];
 
-        if(!(uint.TryParse(points_str, out uint points) && points >0)){
+        if (!(uint.TryParse(points_str, out uint points) && points > 0))
+        {
             notificationManager.NotifyInvalidRefundArguments(points_str);
             return;
         }
 
         // Check for the player in the lobby
-        if(!playerInfoManager.IsPlayerInLobby(username, out ZeepkistNetworkPlayer player))
+        if (!playerInfoManager.IsPlayerInLobby(username, out ZeepkistNetworkPlayer player))
         {
             notificationManager.NotifyRefundNoPlayerInLobby(username);
             return;
         }
 
         // Adding the refunded points to player
-        notificationManager.NotifyRefundingPlayerPoints(username,points,player.SteamID);
-        pointsManager.GetSinglePlayerPoints(player.SteamID, (remainingPoints) =>{
-            pointsManager.AddPoints(player.SteamID,points);
+        notificationManager.NotifyRefundingPlayerPoints(username, points, player.SteamID);
+        pointsManager.GetSinglePlayerPoints(player.SteamID, (remainingPoints) =>
+        {
+            pointsManager.AddPoints(player.SteamID, points);
             pointsManager.SavePlayerPoints(player.SteamID);
         });
-        
-        }
+
+    }
 
 
     // Mixed commands
     private void OnHeadsCommand(bool isLocal, ulong playerId, string arguments)
     {
-        HandleHeadsTailsCommand(isLocal,playerId,arguments,"heads"); 
+        HandleHeadsTailsCommand(isLocal, playerId, arguments, "heads");
     }
     private void OnTailsCommand(bool isLocal, ulong playerId, string arguments)
     {
-        HandleHeadsTailsCommand(isLocal,playerId,arguments,"tails");
+        HandleHeadsTailsCommand(isLocal, playerId, arguments, "tails");
     }
 
-    private void HandleHeadsTailsCommand(bool isLocal,ulong playerId, string arguments, string command)
+    private void HandleHeadsTailsCommand(bool isLocal, ulong playerId, string arguments, string command)
     {
         if (!ZeepkistNetwork.IsMasterClient) return;
 
         // Get player username
-        string username = playerInfoManager.GetPlayerUsername(isLocal,playerId,out playerId);
+        string username = playerInfoManager.GetPlayerUsername(isLocal, playerId, out playerId);
 
         // Check for command outside game round
-        if (!(ZeepkistNetwork.CurrentLobby.GameState==0))
+        if (!(ZeepkistNetwork.CurrentLobby.GameState == 0))
         {
             notificationManager.NotifyMixedCommandOutsideRound(username);
             return;
@@ -253,68 +265,73 @@ public class Coin_ChatCommandManager : MonoBehaviour
             return;
         }
         // Check for a change in the prediction choice
-        if(predictionManager.CheckChangePrediction(playerId, command))
+        if (predictionManager.CheckChangePrediction(playerId, command))
         {
-            notificationManager.NotifyTailsHeadsChange(username, command == "heads"?"tails":"heads", command);
+            notificationManager.NotifyTailsHeadsChange(username, command == "heads" ? "tails" : "heads", command);
             return;
         }
         // Try to parse the points from the arguments
         if (!uint.TryParse(arguments, out uint points) || (points <= 0))
         {
-            notificationManager.NotifyTailsHeadsInvalid(username,command,arguments);
+            notificationManager.NotifyTailsHeadsInvalid(username, command, arguments);
             return;
         }
         // Check remaining points
-        pointsManager.GetSinglePlayerPoints(playerId, (remainingPoints) => {
+        pointsManager.GetSinglePlayerPoints(playerId, (remainingPoints) =>
+        {
             // Now you have the points after they were fetched (or defaulted in case of error)
             Plugin.Logger.LogInfo($"The player has {remainingPoints} points.");
-            if (points>remainingPoints)
+            if (points > remainingPoints)
             {
-                notificationManager.NotifyNotEnoughPoints(username,remainingPoints,points);
+                notificationManager.NotifyNotEnoughPoints(username, remainingPoints, points);
                 return;
             }
 
             // Notify depending on the existing vote
             bool isFirstPrediction;
-            if(predictionManager.CheckExistingPrediction(playerId))
+            if (predictionManager.CheckExistingPrediction(playerId))
             {
                 isFirstPrediction = false;
-            } else{
+            }
+            else
+            {
                 isFirstPrediction = true;
             }
-            notificationManager.NotifySubmittedPrediction(username,isFirstPrediction);
+            notificationManager.NotifySubmittedPrediction(username, isFirstPrediction);
 
             // SubmitPrediction
-            predictionManager.SubmitPrediction(playerId,username, command,points, isFirstPrediction, remainingPoints);
+            predictionManager.SubmitPrediction(playerId, username, command, points, isFirstPrediction, remainingPoints);
         });
-        
-        
+
+
     }
-     private void OnCoinpointsCommand(bool isLocal, ulong playerId, string arguments)
+    private void OnCoinpointsCommand(bool isLocal, ulong playerId, string arguments)
     {
         if (!ZeepkistNetwork.IsMasterClient) return;
 
         // Get player username
-        string username = playerInfoManager.GetPlayerUsername(isLocal,playerId,out playerId);
+        string username = playerInfoManager.GetPlayerUsername(isLocal, playerId, out playerId);
 
         // Check for command outside game round
-        if (!(ZeepkistNetwork.CurrentLobby.GameState==0))
+        if (!(ZeepkistNetwork.CurrentLobby.GameState == 0))
         {
             notificationManager.NotifyMixedCommandOutsideRound(username);
             return;
         }
-        if (!networkingManager.IsConnectedToServer){
+        if (!networkingManager.IsConnectedToServer)
+        {
             notificationManager.NotifyNotConnectedToServer();
             return;
         }
         // Check remaining points
-        pointsManager.GetSinglePlayerPoints(playerId, (remainingPoints) => {
+        pointsManager.GetSinglePlayerPoints(playerId, (remainingPoints) =>
+        {
             // Now you have the points after they were fetched (or defaulted in case of error)
             Plugin.Logger.LogInfo($"The player has {remainingPoints} points.");
-            notificationManager.NotifyRemainingPoints(username,remainingPoints);    
+            notificationManager.NotifyRemainingPoints(username, remainingPoints);
         });
-        
-        
+
+
     }
 
 }

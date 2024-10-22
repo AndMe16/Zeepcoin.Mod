@@ -2,7 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using ZeepCoin;
+using ZeepCoin.src;
 
 
 
@@ -13,25 +13,27 @@ public class Coin_PredictionManager : MonoBehaviour
     private bool predictionActive = false;
     public bool PredictionActive
     {
-        get {return predictionActive;}
+        get { return predictionActive; }
     }
     private uint predictionDuration;
     public uint PredictionDuration
     {
-        get {return predictionDuration;}
+        get { return predictionDuration; }
     }
     uint timeLeft;
     private bool isPaused = false;  // Flag to track if the countdown is paused
 
     public bool IsPaused
     {
-        get {return isPaused;}
-        set {isPaused = value;}
+        get { return isPaused; }
+        set { isPaused = value; }
     }
 
     // Predictions
+#pragma warning disable IDE0044 // Add readonly modifier
     private Dictionary<ulong, (string username, string commandType, uint totalPointsSent)> playerPredictions = [];
     private List<ulong> voteOrder = [];
+#pragma warning restore IDE0044 // Add readonly modifier
 
     // The result of the coin flip ("heads" or "tails")
     private string result;
@@ -39,16 +41,16 @@ public class Coin_PredictionManager : MonoBehaviour
     private Coin_ServerMessageManager serverMessageManager;
     private Coin_PointsManager pointsManager;
     private Coin_NotificationManager notificationManager;
-    private Coin_NetworkingManager networkingManager;
 
     private Coroutine PredictionCountdownCoroutine;
 
+#pragma warning disable IDE0051 // Remove unused private members
     void Start()
+#pragma warning restore IDE0051 // Remove unused private members
     {
         serverMessageManager = FindObjectOfType<Coin_ServerMessageManager>();
         pointsManager = FindObjectOfType<Coin_PointsManager>();
         notificationManager = FindObjectOfType<Coin_NotificationManager>();
-        networkingManager = FindObjectOfType<Coin_NetworkingManager>();
     }
 
 
@@ -71,7 +73,8 @@ public class Coin_PredictionManager : MonoBehaviour
     public void AddTime(int added_duration)
     {
         uint resulting_duration = (uint)(timeLeft + added_duration);
-        if (resulting_duration < 0){
+        if (resulting_duration < 0)
+        {
             resulting_duration = 0;
         }
         timeLeft = resulting_duration;
@@ -83,21 +86,23 @@ public class Coin_PredictionManager : MonoBehaviour
     }
 
     // Submit a prediction for a player
-    public void SubmitPrediction(ulong playerId,string username, string choice, uint points, bool isFirstPrediction, uint remainingPoints)
+    public void SubmitPrediction(ulong playerId, string username, string choice, uint points, bool isFirstPrediction, uint remainingPoints)
     {
         // Deduct points and store the player's prediction
         pointsManager.DeductPoints(playerId, points);
 
-        if (isFirstPrediction){
-            playerPredictions[playerId] = (username,choice,points);
+        if (isFirstPrediction)
+        {
+            playerPredictions[playerId] = (username, choice, points);
         }
-        else{
+        else
+        {
             uint prevSentPoints = playerPredictions[playerId].totalPointsSent;
-            playerPredictions[playerId] = (username,choice,points+prevSentPoints);
+            playerPredictions[playerId] = (username, choice, points + prevSentPoints);
         }
         voteOrder.Insert(0, playerId);
         // Update serverMessage voters table
-        serverMessageManager.UpdateVotersTable(playerPredictions,remainingPoints-points,voteOrder);        
+        serverMessageManager.UpdateVotersTable(playerPredictions, remainingPoints - points, voteOrder);
     }
 
     // End the prediction and determine the result
@@ -108,11 +113,12 @@ public class Coin_PredictionManager : MonoBehaviour
         ulong totalPredictedPoints = TotalPredictedPoints(out ulong totalHeadsPoints, out ulong totalTailsPoints);
 
         // Check for enough predicted points
-        if(totalHeadsPoints==0 || totalTailsPoints==0){
-            notificationManager.NotifyLackPoints(totalHeadsPoints,totalTailsPoints);
+        if (totalHeadsPoints == 0 || totalTailsPoints == 0)
+        {
+            notificationManager.NotifyLackPoints(totalHeadsPoints, totalTailsPoints);
             serverMessageManager.ShowLackPointsServerMessage();
             RefundPredictedPlayersPoints();
-            
+
             return;
         }
 
@@ -128,19 +134,19 @@ public class Coin_PredictionManager : MonoBehaviour
         serverMessageManager.ShowResultServerMessage(result);
 
         // Notify players in chat
-        notificationManager.NotifyPredictionResults(result,totalPredictedPoints,totalHeadsPoints,totalTailsPoints);
-        
+        notificationManager.NotifyPredictionResults(result, totalPredictedPoints, totalHeadsPoints, totalTailsPoints);
+
     }
 
     // Process the predictions and award points based on the result
     private void ProcessResults(double heads_ratio, double tails_ratio)
     {
-        List<ulong> steamIds = new List<ulong>();
+        List<ulong> steamIds = [];
         foreach (var player in playerPredictions)
         {
             steamIds.Add(player.Key);
         }
-        pointsManager.GetPointsFromIdsList(steamIds,(loadedPoints) =>
+        pointsManager.GetPointsFromIdsList(steamIds, (loadedPoints) =>
         {
             uint addedPoints;
             foreach (var prediction in playerPredictions)
@@ -152,15 +158,15 @@ public class Coin_PredictionManager : MonoBehaviour
                 if (playerChoice == result)
                 {
                     // Player guessed correctly, award points
-                    addedPoints = (uint)Math.Round(playerPredictedPoints *(result=="heads"?heads_ratio:tails_ratio),MidpointRounding.AwayFromZero);
+                    addedPoints = (uint)Math.Round(playerPredictedPoints * (result == "heads" ? heads_ratio : tails_ratio), MidpointRounding.AwayFromZero);
                     pointsManager.AddPoints(playerId, addedPoints);
                 }
             }
             pointsManager.SaveAllPlayersPoints();
         });
 
-        
-        
+
+
     }
 
     public void StopPrediction()
@@ -173,29 +179,31 @@ public class Coin_PredictionManager : MonoBehaviour
 
     private void RefundPredictedPlayersPoints()
     {
-        List<ulong> steamIds = new List<ulong>();
+        List<ulong> steamIds = [];
         foreach (var player in playerPredictions)
         {
             steamIds.Add(player.Key);
         }
-        pointsManager.GetPointsFromIdsList(steamIds,(loadedPoints) =>
+        pointsManager.GetPointsFromIdsList(steamIds, (loadedPoints) =>
         {
             foreach (var prediction in playerPredictions)
             {
                 ulong playerId = prediction.Key;
                 uint playerPredictedPoints = prediction.Value.totalPointsSent;
                 // Refunding all points
-                pointsManager.AddPoints(playerId, playerPredictedPoints); 
+                pointsManager.AddPoints(playerId, playerPredictedPoints);
             }
             pointsManager.SaveAllPlayersPoints();
-        }); 
+        });
     }
 
     public bool CheckChangePrediction(ulong playerId, string act_choice)
     {
-        if(playerPredictions.TryGetValue(playerId, out var prevPrediction)){
+        if (playerPredictions.TryGetValue(playerId, out var prevPrediction))
+        {
             string prev_choice = prevPrediction.commandType;
-            if (act_choice != prev_choice){
+            if (act_choice != prev_choice)
+            {
                 return true;
             }
         }
@@ -204,7 +212,7 @@ public class Coin_PredictionManager : MonoBehaviour
 
     public bool CheckExistingPrediction(ulong playerId)
     {
-        if(playerPredictions.ContainsKey(playerId))
+        if (playerPredictions.ContainsKey(playerId))
         {
             return true;
         }
@@ -231,20 +239,26 @@ public class Coin_PredictionManager : MonoBehaviour
         }
         return totalPredictedPoints;
     }
-    
+
     private void CalculateRatios(ulong totalHeadsPoints, ulong totalTailsPoints, out double heads_ratio, out double tails_ratio)
     {
-        if (totalHeadsPoints>0){
+        if (totalHeadsPoints > 0)
+        {
             heads_ratio = (double)(totalHeadsPoints + totalTailsPoints) / totalHeadsPoints;
             heads_ratio = Math.Round(heads_ratio, 2, MidpointRounding.AwayFromZero);
-        } else{
+        }
+        else
+        {
             heads_ratio = 0;
         }
 
-        if (totalTailsPoints>0){
+        if (totalTailsPoints > 0)
+        {
             tails_ratio = (double)(totalHeadsPoints + totalTailsPoints) / totalTailsPoints;
             tails_ratio = Math.Round(tails_ratio, 2, MidpointRounding.AwayFromZero);
-        } else{
+        }
+        else
+        {
             tails_ratio = 0;
         }
     }
@@ -308,6 +322,6 @@ public class Coin_PredictionManager : MonoBehaviour
         TotalVoters(out heads_voters, out tails_voters);
         CalculateRatios(totalHeadsPoints, totalTailsPoints, out heads_ratio, out tails_ratio);
     }
-    
-    
+
+
 }

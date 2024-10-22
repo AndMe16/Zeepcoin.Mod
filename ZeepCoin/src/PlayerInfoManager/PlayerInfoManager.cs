@@ -29,5 +29,5 @@ public class Coin_PlayerInfoManager : MonoBehaviour
             return false;
         }
         return true;
-    }   
+    }
 }

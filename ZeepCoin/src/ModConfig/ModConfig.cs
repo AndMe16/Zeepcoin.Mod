@@ -2,7 +2,7 @@ using BepInEx.Configuration;
 using UnityEngine;
 using ZeepSDK.Messaging;
 
-namespace ZeepCoin;
+namespace ZeepCoin.src.ModConfig;
 
 public class Coin_ModConfig : MonoBehaviour
 {
@@ -14,9 +14,9 @@ public class Coin_ModConfig : MonoBehaviour
     public static ConfigEntry<int> rechargeInterval;
     public static ConfigEntry<int> defaultPoints;
 
-    public static bool changedFromDatabase = false; 
+    public static bool changedFromDatabase = false;
 
-    private static readonly int localRechargePoints= 10;
+    private static readonly int localRechargePoints = 10;
     private static readonly int localRechargeInterval = 900;
     private static readonly int localDefaultPoints = 1000;
 
@@ -26,23 +26,25 @@ public class Coin_ModConfig : MonoBehaviour
         useGlobalDatabase = config.Bind("Database", "Use Global Database", true,
                                         "Player's points are getting stored in a global database");
 
-        rechargePoints = config.Bind("User Database",    
-                                    "Points added per recharge", 
-                                    localRechargePoints, 
+        rechargePoints = config.Bind("User Database",
+                                    "Points added per recharge",
+                                    localRechargePoints,
                                     new ConfigDescription("Not aplicable for global database! <br>Min.5 Max. 100 <br>Amount of points that will be added per recharge for each player", new AcceptableValueRange<int>(5, 100)));
 
-        rechargeInterval = config.Bind("User Database",    
-                                        "Recharge Time interval (sec)", 
-                                        localRechargeInterval, 
-                                        new ConfigDescription("Not aplicable for global database! <br>Min.60 Max.3600 <br>Time interval for recharging points", new AcceptableValueRange<int>(60, 3600))); 
+        rechargeInterval = config.Bind("User Database",
+                                        "Recharge Time interval (sec)",
+                                        localRechargeInterval,
+                                        new ConfigDescription("Not aplicable for global database! <br>Min.60 Max.3600 <br>Time interval for recharging points", new AcceptableValueRange<int>(60, 3600)));
 
-        defaultPoints = config.Bind("User Database",    
-                                        "Default initial points", 
-                                        localDefaultPoints, 
+        defaultPoints = config.Bind("User Database",
+                                        "Default initial points",
+                                        localDefaultPoints,
                                         new ConfigDescription("Not aplicable for global database! <br>Min.100 Max.2000 <br>The default initial points that players get", new AcceptableValueRange<int>(100, 2000)));
     }
 
+#pragma warning disable IDE0051 // Remove unused private members
     void Start()
+#pragma warning restore IDE0051 // Remove unused private members
     {
         useGlobalDatabase.SettingChanged += OnSettingsChanged;
         rechargePoints.SettingChanged += OnSettingsChanged;
@@ -66,8 +68,8 @@ public class Coin_ModConfig : MonoBehaviour
             // Update the networking manager based on the new value of useGlobalDatabase
             if (useGlobalDatabase.Value)
             {
-                MessengerApi.LogWarning("The other setting will reset since you are using the global database",10); 
-            } 
+                MessengerApi.LogWarning("The other setting will reset since you are using the global database", 10);
+            }
             _ = networkingManager.SetIsGlobalAsync(useGlobalDatabase.Value);
 
         }
@@ -76,21 +78,21 @@ public class Coin_ModConfig : MonoBehaviour
             if (!useGlobalDatabase.Value) // Check if useGlobalDatabase is false before updating
             {
                 pointsManager.RechargePoints = (uint)rechargePoints.Value;
-                serverMessageManager.UpdateRechargeInfo();  
+                serverMessageManager.UpdateRechargeInfo();
             }
             else
             {
-                if(!changedFromDatabase)
+                if (!changedFromDatabase)
                 {
                     LoadConfigValues();
                     Plugin.Logger.LogInfo("Global database is enabled; rechargePoints setting is ignored.");
-                    MessengerApi.LogWarning("\"Points added per recharge\" will have no effect, you are using the global database",10);
+                    MessengerApi.LogWarning("\"Points added per recharge\" will have no effect, you are using the global database", 10);
                 }
                 else
                 {
                     changedFromDatabase = false;
                 }
-                
+
             }
         }
         else if (configEntry == rechargeInterval)
@@ -102,17 +104,17 @@ public class Coin_ModConfig : MonoBehaviour
             }
             else
             {
-                if(!changedFromDatabase)
+                if (!changedFromDatabase)
                 {
                     LoadConfigValues();
                     Plugin.Logger.LogInfo("Global database is enabled; rechargeInterval setting is ignored.");
-                    MessengerApi.LogWarning("\"Recharge Time interval\" will have no effect, you are using the global database",10);
+                    MessengerApi.LogWarning("\"Recharge Time interval\" will have no effect, you are using the global database", 10);
                 }
                 else
                 {
                     changedFromDatabase = false;
                 }
-                
+
             }
         }
         else if (configEntry == defaultPoints)
@@ -123,11 +125,11 @@ public class Coin_ModConfig : MonoBehaviour
             }
             else
             {
-                if(!changedFromDatabase)
+                if (!changedFromDatabase)
                 {
                     LoadConfigValues();
                     Plugin.Logger.LogInfo("Global database is enabled; defaultPoints setting is ignored.");
-                    MessengerApi.LogWarning("\"Default initial\" points will have no effect, you are using the global database",10);
+                    MessengerApi.LogWarning("\"Default initial\" points will have no effect, you are using the global database", 10);
                 }
                 else
                 {
@@ -151,7 +153,7 @@ public class Coin_ModConfig : MonoBehaviour
             pointsManager.RechargePoints = (uint)rechargePoints.Value;
             pointsManager.RechargeInterval = rechargeInterval.Value;
             serverMessageManager.UpdateRechargeInfo();
-            pointsManager.DefaultInitialPoints = (uint)defaultPoints.Value;  
+            pointsManager.DefaultInitialPoints = (uint)defaultPoints.Value;
         }
         else
         {
@@ -163,7 +165,7 @@ public class Coin_ModConfig : MonoBehaviour
             pointsManager.RechargePoints = (uint)rechargePoints.Value;
             pointsManager.RechargeInterval = rechargeInterval.Value;
             serverMessageManager.UpdateRechargeInfo();
-            pointsManager.DefaultInitialPoints = (uint)defaultPoints.Value; 
+            pointsManager.DefaultInitialPoints = (uint)defaultPoints.Value;
         }
     }
 }

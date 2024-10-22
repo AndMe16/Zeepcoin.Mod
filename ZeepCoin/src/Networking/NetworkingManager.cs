@@ -7,7 +7,8 @@ using Newtonsoft.Json;
 using Steamworks;
 using UnityEngine;
 using UnityEngine.Networking;
-using ZeepCoin;
+using ZeepCoin.src;
+using ZeepCoin.src.ModConfig;
 using ZeepSDK.Messaging;
 
 public class Coin_NetworkingManager : MonoBehaviour
@@ -21,13 +22,13 @@ public class Coin_NetworkingManager : MonoBehaviour
 
     public bool IsFirstCon
     {
-        set {isFirstCon = value;}
+        set { isFirstCon = value; }
     }
 
     private bool isFirstDiscon = true;
     public bool IsFirstDiscon
     {
-        set {isFirstDiscon = value;}
+        set { isFirstDiscon = value; }
     }
 
 
@@ -35,14 +36,14 @@ public class Coin_NetworkingManager : MonoBehaviour
 
     public bool IsConnectedToServer
     {
-        get {return isConnectedToServer;}
+        get { return isConnectedToServer; }
     }
 
     private bool isGlobal;
 
     public bool IsGlobal
     {
-        get {return isGlobal;}
+        get { return isGlobal; }
     }
 
     private bool savedData = true;
@@ -53,7 +54,7 @@ public class Coin_NetworkingManager : MonoBehaviour
     public async Task<bool> SetIsGlobalAsync(bool value)
     {
         bool canChange = await WaitForConditionAsync();
-        
+
         if (canChange)
         {
             isGlobal = value;
@@ -70,31 +71,27 @@ public class Coin_NetworkingManager : MonoBehaviour
             Plugin.Logger.LogInfo("Cannot change IsGlobal yet.");
         }
 
-        return canChange; 
+        return canChange;
     }
 
     private Coroutine pingServerCoroutine;
 
-   
+
 
     // Server
     private readonly string baseUrl = "https://zeep-coin.onrender.com";
 
 
     [System.Serializable]
-    public class PlayerPointsData
+    public class PlayerPointsData(ulong playerId, uint points)
     {
-        public ulong playerId;
-        public uint points;
-
-        public PlayerPointsData(ulong playerId, uint points)
-        {
-            this.playerId = playerId;
-            this.points = points;
-        }
+        public ulong playerId = playerId;
+        public uint points = points;
     }
 
+#pragma warning disable IDE0051 // Remove unused private members
     void Start()
+#pragma warning restore IDE0051 // Remove unused private members
     {
         isGlobal = Coin_ModConfig.useGlobalDatabase.Value;
         predictionManager = FindObjectOfType<Coin_PredictionManager>();
@@ -110,61 +107,62 @@ public class Coin_NetworkingManager : MonoBehaviour
             yield return new WaitForSecondsRealtime(30); // 600 seconds = 10 minutes
         }
     }
-    
+
     private IEnumerator PingServer()
     {
         string url = $"{baseUrl}/ping";
-        if(isFirstCon){
+        if (isFirstCon)
+        {
             //MessengerApi.Log("Connecting to the Coin Server");
             Plugin.Logger.LogInfo("Connecting to the Coin Server");
         }
-        using (UnityWebRequest webRequest = UnityWebRequest.Get(url))
-        {
-            webRequest.timeout = 80;  
-            yield return webRequest.SendWebRequest();
+        using UnityWebRequest webRequest = UnityWebRequest.Get(url);
+        webRequest.timeout = 80;
+        yield return webRequest.SendWebRequest();
 
-            if (webRequest.result == UnityWebRequest.Result.ConnectionError || webRequest.result == UnityWebRequest.Result.ProtocolError)
+        if (webRequest.result == UnityWebRequest.Result.ConnectionError || webRequest.result == UnityWebRequest.Result.ProtocolError)
+        {
+            if (isFirstDiscon)
             {
-                if (isFirstDiscon){
-                    MessengerApi.LogError("Failed connecting with the Coin Server");
-                    isFirstDiscon = false;
-                    isFirstCon = true;
-                }
-                Plugin.Logger.LogError("Error Pinging Server: " + webRequest.error);
-                isConnectedToServer = false;
+                MessengerApi.LogError("Failed connecting with the Coin Server");
+                isFirstDiscon = false;
+                isFirstCon = true;
             }
-            else
-            {
-                if(isFirstCon){
-                    // MessengerApi.LogSuccess("Connected to the Coin Server!");
-                    if (isGlobal)
-                    {
-                        Coin_ModConfig.LoadConfigValues();
-                    }
-                    isFirstCon = false;
-                    isFirstDiscon = true;
-                    StartCoroutine(GetToken(SteamClient.SteamId.ToString(), 
-                            onTokenReceived: (token) => 
-                            {
-                                Plugin.Logger.LogInfo($"Received token");
-                                jwtToken = token;
-                            }, 
-                            onError: (error) => 
-                            {
-                                Plugin.Logger.LogError($"Failed to get token: {error}");
-                    }));
-                }
-                Plugin.Logger.LogInfo("Server is active, response: " + webRequest.downloadHandler.text);
-                isConnectedToServer = true;
-            }
+            Plugin.Logger.LogError("Error Pinging Server: " + webRequest.error);
+            isConnectedToServer = false;
         }
-        
+        else
+        {
+            if (isFirstCon)
+            {
+                // MessengerApi.LogSuccess("Connected to the Coin Server!");
+                if (isGlobal)
+                {
+                    Coin_ModConfig.LoadConfigValues();
+                }
+                isFirstCon = false;
+                isFirstDiscon = true;
+                StartCoroutine(GetToken(SteamClient.SteamId.ToString(),
+                        onTokenReceived: (token) =>
+                        {
+                            Plugin.Logger.LogInfo($"Received token");
+                            jwtToken = token;
+                        },
+                        onError: (error) =>
+                        {
+                            Plugin.Logger.LogError($"Failed to get token: {error}");
+                        }));
+            }
+            Plugin.Logger.LogInfo("Server is active, response: " + webRequest.downloadHandler.text);
+            isConnectedToServer = true;
+        }
+
     }
     public void StartPingServer()
     {
         pingServerCoroutine = StartCoroutine(PingServerRoutine());
     }
-    
+
     public void StopPingServer()
     {
         StopCoroutine(pingServerCoroutine);
@@ -177,41 +175,39 @@ public class Coin_NetworkingManager : MonoBehaviour
         // Plugin.Logger.LogInfo($"Loading points for player ID: {playerId}");
 
         // Define the URL based on whether it's global or host-specific points
-        string url = isGlobal 
-            ? $"{baseUrl}/points/global/player/{playerId}" 
+        string url = isGlobal
+            ? $"{baseUrl}/points/global/player/{playerId}"
             : $"{baseUrl}/points/host/{SteamClient.SteamId}/player/{playerId}";
 
-        using (UnityWebRequest request = UnityWebRequest.Get(url))
+        using UnityWebRequest request = UnityWebRequest.Get(url);
+        request.timeout = 5;
+        // Send the request and wait for the response
+        yield return request.SendWebRequest();
+
+        if (request.result == UnityWebRequest.Result.Success)
         {
-            request.timeout = 5;
-            // Send the request and wait for the response
-            yield return request.SendWebRequest();
+            // Deserialize the response JSON
+            string jsonResponse = request.downloadHandler.text;
+            var response = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonResponse);
 
-            if (request.result == UnityWebRequest.Result.Success)
+            if (response.ContainsKey("points"))
             {
-                // Deserialize the response JSON
-                string jsonResponse = request.downloadHandler.text;
-                var response = JsonConvert.DeserializeObject<Dictionary<string, object>>(jsonResponse);
-
-                if (response.ContainsKey("points"))
-                {
-                    int points = Convert.ToInt32(response["points"]);
-                    Plugin.Logger.LogInfo($"Points for player {playerId}: {points}");
-                    onSuccess(points);
-                }
-                else if (response.ContainsKey("error"))
-                {
-                    string error = response["error"].ToString();
-                    Plugin.Logger.LogWarning($"Error loading points for player {playerId}: {error}");
-                    onFailure(error);
-                }
+                int points = Convert.ToInt32(response["points"]);
+                Plugin.Logger.LogInfo($"Points for player {playerId}: {points}");
+                onSuccess(points);
             }
-            else
+            else if (response.ContainsKey("error"))
             {
-                string error = request.error;
-                Plugin.Logger.LogError($"Error loading points for player {playerId}: {error}");
+                string error = response["error"].ToString();
+                Plugin.Logger.LogWarning($"Error loading points for player {playerId}: {error}");
                 onFailure(error);
             }
+        }
+        else
+        {
+            string error = request.error;
+            Plugin.Logger.LogError($"Error loading points for player {playerId}: {error}");
+            onFailure(error);
         }
     }
 
@@ -220,50 +216,48 @@ public class Coin_NetworkingManager : MonoBehaviour
         //Plugin.Logger.LogInfo($"Saving data for player {playerId} to server");
         savedData = false;
         // Define the URL based on whether it's global or host-specific points
-        string url = isGlobal 
-            ? $"{baseUrl}/points/global/player/{playerId}" 
+        string url = isGlobal
+            ? $"{baseUrl}/points/global/player/{playerId}"
             : $"{baseUrl}/points/host/{SteamClient.SteamId}/player/{playerId}";
 
-        PlayerPointsData data = new PlayerPointsData(playerId, points);
+        PlayerPointsData data = new(playerId, points);
         string jsonData = JsonConvert.SerializeObject(data);
         //Plugin.Logger.LogInfo($"Serialized JSON Data: {jsonData}");
 
-        using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
+        using UnityWebRequest request = new(url, "POST");
+        request.timeout = 10;
+        byte[] jsonToSend = new UTF8Encoding().GetBytes(jsonData);
+        request.uploadHandler = new UploadHandlerRaw(jsonToSend);
+        request.downloadHandler = new DownloadHandlerBuffer();
+        request.SetRequestHeader("Content-Type", "application/json");
+
+        // Attach JWT token in the Authorization header
+        if (!string.IsNullOrEmpty(jwtToken))
         {
-            request.timeout = 10; 
-            byte[] jsonToSend = new UTF8Encoding().GetBytes(jsonData);
-            request.uploadHandler = new UploadHandlerRaw(jsonToSend);
-            request.downloadHandler = new DownloadHandlerBuffer();
-            request.SetRequestHeader("Content-Type", "application/json");
-
-            // Attach JWT token in the Authorization header
-            if (!string.IsNullOrEmpty(jwtToken))
-            {
-                request.SetRequestHeader("Authorization", jwtToken);
-            }
-            else
-            {
-                Debug.LogError("No JWT token available!");
-                savedData = true;
-                yield break;
-            }
-            
-            // Send the request and wait for the response
-            yield return request.SendWebRequest();
-            savedData = true;
-            if (request.result == UnityWebRequest.Result.Success)
-            {
-
-                Plugin.Logger.LogInfo($"Data points from {playerId} saved successfully.");
-                //MessengerApi.LogSuccess("All player's points saved successfully!");
-            }
-            else
-            {
-                Plugin.Logger.LogError($"Error saving data points from {playerId}: {request.error}");
-                MessengerApi.LogError("Failed saving the points to the server!");
-            }
+            request.SetRequestHeader("Authorization", jwtToken);
         }
-            
+        else
+        {
+            Debug.LogError("No JWT token available!");
+            savedData = true;
+            yield break;
+        }
+
+        // Send the request and wait for the response
+        yield return request.SendWebRequest();
+        savedData = true;
+        if (request.result == UnityWebRequest.Result.Success)
+        {
+
+            Plugin.Logger.LogInfo($"Data points from {playerId} saved successfully.");
+            //MessengerApi.LogSuccess("All player's points saved successfully!");
+        }
+        else
+        {
+            Plugin.Logger.LogError($"Error saving data points from {playerId}: {request.error}");
+            MessengerApi.LogError("Failed saving the points to the server!");
+        }
+
     }
 
     public IEnumerator SavePointsFromDict(Dictionary<ulong, uint> totalPointsDataDictionary)
@@ -271,47 +265,45 @@ public class Coin_NetworkingManager : MonoBehaviour
         //Plugin.Logger.LogInfo("Saving data from dictionary to server");
         savedData = false;
         // Define the URL based on whether it's global or host-specific points
-        string url = isGlobal 
-            ? $"{baseUrl}/points/global" 
+        string url = isGlobal
+            ? $"{baseUrl}/points/global"
             : $"{baseUrl}/points/host/{SteamClient.SteamId}";
 
         string jsonData = JsonConvert.SerializeObject(totalPointsDataDictionary);
         //Plugin.Logger.LogInfo($"Serialized JSON Data: {jsonData}");
 
-        using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
+        using UnityWebRequest request = new(url, "POST");
+        request.timeout = 10;
+        byte[] jsonToSend = new UTF8Encoding().GetBytes(jsonData);
+        request.uploadHandler = new UploadHandlerRaw(jsonToSend);
+        request.downloadHandler = new DownloadHandlerBuffer();
+        request.SetRequestHeader("Content-Type", "application/json");
+
+        // Attach JWT token in the Authorization header
+        if (!string.IsNullOrEmpty(jwtToken))
         {
-            request.timeout = 10; 
-            byte[] jsonToSend = new UTF8Encoding().GetBytes(jsonData);
-            request.uploadHandler = new UploadHandlerRaw(jsonToSend);
-            request.downloadHandler = new DownloadHandlerBuffer();
-            request.SetRequestHeader("Content-Type", "application/json");
-
-            // Attach JWT token in the Authorization header
-            if (!string.IsNullOrEmpty(jwtToken))
-            {
-                request.SetRequestHeader("Authorization", jwtToken);
-            }
-            else
-            {
-                Debug.LogError("No JWT token available!");
-                savedData = true;
-                yield break;
-            }
-            
-            // Send the request and wait for the response
-            yield return request.SendWebRequest();
+            request.SetRequestHeader("Authorization", jwtToken);
+        }
+        else
+        {
+            Debug.LogError("No JWT token available!");
             savedData = true;
-            if (request.result == UnityWebRequest.Result.Success)
-            {
+            yield break;
+        }
 
-                Plugin.Logger.LogInfo("Data points from dictionary saved successfully.");
-                //MessengerApi.LogSuccess("All player's points saved successfully!");
-            }
-            else
-            {
-                Plugin.Logger.LogError($"Error saving data points from dictionary: {request.error}");
-                MessengerApi.LogError("Failed saving the points to the server!");
-            }
+        // Send the request and wait for the response
+        yield return request.SendWebRequest();
+        savedData = true;
+        if (request.result == UnityWebRequest.Result.Success)
+        {
+
+            Plugin.Logger.LogInfo("Data points from dictionary saved successfully.");
+            //MessengerApi.LogSuccess("All player's points saved successfully!");
+        }
+        else
+        {
+            Plugin.Logger.LogError($"Error saving data points from dictionary: {request.error}");
+            MessengerApi.LogError("Failed saving the points to the server!");
         }
     }
 
@@ -322,38 +314,36 @@ public class Coin_NetworkingManager : MonoBehaviour
         while (predictionManager.PredictionActive || !savedData)
         {
             //Plugin.Logger.LogInfo($"Waiting for the conditions to change PredictionActive: {predictionManager.PredictionActive} savedData:{savedData}");
-            await Task.Delay(1000);  
+            await Task.Delay(1000);
         }
         Plugin.Logger.LogInfo($"Not longer waiting for the conditions: {predictionManager.PredictionActive} savedData:{savedData}");
-        return true;  
+        return true;
     }
 
     public IEnumerator FetchAllConfigValues(System.Action<Dictionary<string, string>> onSuccess, System.Action<string> onFailure)
     {
         string url = $"{baseUrl}/config_values";
 
-        using (UnityWebRequest request = UnityWebRequest.Get(url))
-        {
-            request.timeout = 10; 
-            yield return request.SendWebRequest();
+        using UnityWebRequest request = UnityWebRequest.Get(url);
+        request.timeout = 10;
+        yield return request.SendWebRequest();
 
-            if (request.result == UnityWebRequest.Result.Success)
+        if (request.result == UnityWebRequest.Result.Success)
+        {
+            try
             {
-                try
-                {
-                    string jsonResponse = request.downloadHandler.text;
-                    var configValues = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonResponse);
-                    onSuccess(configValues);
-                }
-                catch (Exception ex)
-                {
-                    onFailure($"Failed to deserialize JSON: {ex.Message}");
-                }
+                string jsonResponse = request.downloadHandler.text;
+                var configValues = JsonConvert.DeserializeObject<Dictionary<string, string>>(jsonResponse);
+                onSuccess(configValues);
             }
-            else
+            catch (Exception ex)
             {
-                onFailure($"Request error: {request.error}");
+                onFailure($"Failed to deserialize JSON: {ex.Message}");
             }
+        }
+        else
+        {
+            onFailure($"Request error: {request.error}");
         }
     }
 
@@ -404,31 +394,29 @@ public class Coin_NetworkingManager : MonoBehaviour
         string url = $"{baseUrl}/login";
         string jsonData = JsonConvert.SerializeObject(new { player_id = playerId });
 
-        using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
+        using UnityWebRequest request = new(url, "POST");
+        byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonData);
+        request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+        request.downloadHandler = new DownloadHandlerBuffer();
+        request.SetRequestHeader("Content-Type", "application/json");
+
+        yield return request.SendWebRequest();
+
+        if (request.result == UnityWebRequest.Result.Success)
         {
-            byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonData);
-            request.uploadHandler = new UploadHandlerRaw(bodyRaw);
-            request.downloadHandler = new DownloadHandlerBuffer();
-            request.SetRequestHeader("Content-Type", "application/json");
-
-            yield return request.SendWebRequest();
-
-            if (request.result == UnityWebRequest.Result.Success)
+            var response = JsonConvert.DeserializeObject<Dictionary<string, string>>(request.downloadHandler.text);
+            if (response.ContainsKey("token"))
             {
-                var response = JsonConvert.DeserializeObject<Dictionary<string, string>>(request.downloadHandler.text);
-                if (response.ContainsKey("token"))
-                {
-                    onTokenReceived(response["token"]);
-                }
-                else
-                {
-                    onError("Token not received");
-                }
+                onTokenReceived(response["token"]);
             }
             else
             {
-                onError($"Error fetching token: {request.error}");
+                onError("Token not received");
             }
+        }
+        else
+        {
+            onError($"Error fetching token: {request.error}");
         }
     }
 

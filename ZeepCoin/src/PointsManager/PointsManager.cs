@@ -1,8 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
-using ZeepCoin;
+using ZeepCoin.src;
+using ZeepCoin.src.ModConfig;
 using ZeepkistClient;
 
 public class Coin_PointsManager : MonoBehaviour
@@ -14,37 +14,41 @@ public class Coin_PointsManager : MonoBehaviour
 
     public uint DefaultInitialPoints
     {
-        set {defaultInitialPoints = value;}
+        set { defaultInitialPoints = value; }
     }
 
     private int rechargeInterval;
 
     public int RechargeInterval
     {
-        set {rechargeInterval = value;}
+        set { rechargeInterval = value; }
     }
 
     private uint rechargePoints;
 
     public uint RechargePoints
     {
-        set {rechargePoints = value;}
+        set { rechargePoints = value; }
     }
 
     // Dictionary to store player points
-    private Dictionary<ulong, uint> playerPoints = new Dictionary<ulong, uint>();
+#pragma warning disable IDE0044 // Add readonly modifier
+    private Dictionary<ulong, uint> playerPoints = [];
+#pragma warning restore IDE0044 // Add readonly modifier
 
 
     private bool isRechargingPaused = false;  // Flag to track if the countdown is paused
 
     public bool IsRechargingPaused
     {
-        get {return isRechargingPaused;}
-        set {isRechargingPaused = value;}
+        get { return isRechargingPaused; }
+        set { isRechargingPaused = value; }
     }
 
     // Initialize the values in Start to ensure ModConfig is ready
+#pragma warning disable IDE0051 // Remove unused private members
     private void Start()
+#pragma warning restore IDE0051 // Remove unused private members
     {
         defaultInitialPoints = (uint)Coin_ModConfig.defaultPoints.Value;
         rechargeInterval = Coin_ModConfig.rechargeInterval.Value;
@@ -96,13 +100,15 @@ public class Coin_PointsManager : MonoBehaviour
         else
         {
             Plugin.Logger.LogInfo("Trying to load player points from server");
-            StartCoroutine(networkingManager.LoadSinglePlayerPoints(playerId, 
-            (points) => {
+            StartCoroutine(networkingManager.LoadSinglePlayerPoints(playerId,
+            (points) =>
+            {
                 Plugin.Logger.LogInfo($"Player {playerId} has {points} points.");
                 playerPoints[playerId] = (uint)points;
                 onPointsRetrieved?.Invoke((uint)points);  // Pass the points to the callback
             },
-            (error) => {
+            (error) =>
+            {
                 Plugin.Logger.LogWarning($"Failed to retrieve points for player {playerId}: {error}");
                 if (error.Contains("404"))
                 {
@@ -110,7 +116,8 @@ public class Coin_PointsManager : MonoBehaviour
                     Plugin.Logger.LogInfo($"Player {playerId} does not have any points. Assign {defaultInitialPoints} default points to player");
                     onPointsRetrieved?.Invoke(defaultInitialPoints);  // Pass default points to the callback in case of error
                 }
-                else{
+                else
+                {
                     Plugin.Logger.LogInfo($"Not loading default points of player {playerId} since the error {error} is not related to a missing player in DB");
                 }
             }));
@@ -119,7 +126,7 @@ public class Coin_PointsManager : MonoBehaviour
 
     public void GetPointsFromIdsList(List<ulong> playersIds, System.Action<Dictionary<ulong, uint>> onPointsRetrieved)
     {
-        Dictionary<ulong, uint> loadedPoints = new Dictionary<ulong, uint>();
+        Dictionary<ulong, uint> loadedPoints = [];
         int remainingPlayers = playersIds.Count; // Counter to track how many players are left to retrieve
 
         foreach (ulong playerId in playersIds)
@@ -146,29 +153,32 @@ public class Coin_PointsManager : MonoBehaviour
     {
         while (true)
         {
-            if (!isRechargingPaused && networkingManager.IsConnectedToServer){
+            if (!isRechargingPaused && networkingManager.IsConnectedToServer)
+            {
                 yield return new WaitForSecondsRealtime(rechargeInterval);
-                
-                List<ulong> steamIds = new List<ulong>();
+
+                List<ulong> steamIds = [];
                 foreach (var player in ZeepkistNetwork.PlayerList)
                 {
                     steamIds.Add(player.SteamID);
                 }
-                GetPointsFromIdsList(steamIds,(loadedPoints) => {
-                    foreach (var player in loadedPoints){
+                GetPointsFromIdsList(steamIds, (loadedPoints) =>
+                {
+                    foreach (var player in loadedPoints)
+                    {
                         AddPoints(player.Key, rechargePoints);
                     }
                     SaveAllPlayersPoints();
                     Plugin.Logger.LogInfo($"Recharging {rechargePoints} points each {rechargeInterval} seconds");
                 });
 
-                
+
             }
             else
             {
                 yield return null;  // When paused, just wait until it's resumed
             }
-            
+
         }
     }
 
@@ -193,9 +203,9 @@ public class Coin_PointsManager : MonoBehaviour
 
     public void SavePlayerPoints(ulong playerId)
     {
-        if(playerPoints.TryGetValue(playerId,out uint points))
+        if (playerPoints.TryGetValue(playerId, out uint points))
         {
-            StartCoroutine(networkingManager.SaveSinglePlayerPoints(playerId,points));
+            StartCoroutine(networkingManager.SaveSinglePlayerPoints(playerId, points));
         }
     }
 

@@ -1,5 +1,5 @@
 using UnityEngine;
-using ZeepCoin;
+using ZeepCoin.src;
 using ZeepkistClient;
 using ZeepSDK.Multiplayer;
 using ZeepSDK.Racing;
@@ -12,11 +12,13 @@ public class Coin_GameEventsManager : MonoBehaviour
     private Coin_NetworkingManager networkingManager;
 
     private Coroutine rechargePointsCoroutine;
-    
+
 
     private bool wasHost = false;
 
+#pragma warning disable IDE0051 // Remove unused private members
     void Start()
+#pragma warning restore IDE0051 // Remove unused private members
     {
         pointsManager = FindObjectOfType<Coin_PointsManager>();
         predictionManager = FindObjectOfType<Coin_PredictionManager>();
@@ -27,19 +29,21 @@ public class Coin_GameEventsManager : MonoBehaviour
         RacingApi.LevelLoaded += OnLevelLoaded;
         RacingApi.RoundEnded += OnRoundEnded;
         ZeepkistNetwork.MasterChanged += OnMasterChanged;
-        MultiplayerApi.CreatedRoom += OnCreatedRoom;      
+        MultiplayerApi.CreatedRoom += OnCreatedRoom;
     }
 
     private void OnCreatedRoom()
     {
         wasHost = true;
-        networkingManager.StartPingServer(); 
+        networkingManager.StartPingServer();
     }
 
     private void OnDisconnectedFromGame()
     {
-        if (wasHost){
-            if (predictionManager.PredictionActive){
+        if (wasHost)
+        {
+            if (predictionManager.PredictionActive)
+            {
                 predictionManager.StopPrediction();
             }
             StopCoroutine(rechargePointsCoroutine);
@@ -53,17 +57,21 @@ public class Coin_GameEventsManager : MonoBehaviour
     private void OnLevelLoaded()
     {
         Plugin.Logger.LogInfo("Level Loaded");
-        if (MultiplayerApi.IsPlayingOnline){
+        if (MultiplayerApi.IsPlayingOnline)
+        {
             if (ZeepkistNetwork.IsMasterClient)
-            {   
-                if (predictionManager.PredictionActive){
+            {
+                if (predictionManager.PredictionActive)
+                {
                     predictionManager.ResumeCountdown();
                 }
 
-                if (pointsManager.IsRechargingPaused == false){
+                if (pointsManager.IsRechargingPaused == false)
+                {
                     rechargePointsCoroutine = StartCoroutine(pointsManager.RechargingPoints());
                 }
-                else{
+                else
+                {
                     pointsManager.ResumeRecharge();
                 }
             }
@@ -72,13 +80,16 @@ public class Coin_GameEventsManager : MonoBehaviour
 
     private void OnRoundEnded()
     {
-        if (MultiplayerApi.IsPlayingOnline){
+        if (MultiplayerApi.IsPlayingOnline)
+        {
             if (ZeepkistNetwork.IsMasterClient)
-            { 
-                if (predictionManager.PredictionActive){
+            {
+                if (predictionManager.PredictionActive)
+                {
                     predictionManager.PauseCountdown();
                 }
-                if (pointsManager.IsRechargingPaused == false){
+                if (pointsManager.IsRechargingPaused == false)
+                {
                     pointsManager.PauseRecharge();
                 }
             }
@@ -88,7 +99,8 @@ public class Coin_GameEventsManager : MonoBehaviour
     private void OnMasterChanged(ZeepkistNetworkPlayer player)
     {
         Plugin.Logger.LogInfo($"The new master of the lobby is: {player.Username}");
-        if(player.IsLocal){
+        if (player.IsLocal)
+        {
             rechargePointsCoroutine = StartCoroutine(pointsManager.RechargingPoints());
             networkingManager.StartPingServer();
             wasHost = true;

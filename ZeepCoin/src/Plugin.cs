@@ -1,9 +1,10 @@
 ﻿using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
+using ZeepCoin.src.ModConfig;
 
 
-namespace ZeepCoin;
+namespace ZeepCoin.src;
 
 [BepInPlugin("andme123.zeepcoin", MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
 [BepInDependency("ZeepSDK")]
@@ -14,7 +15,9 @@ public class Plugin : BaseUnityPlugin
 
     public static Coin_ModConfig modConfig;
 
+#pragma warning disable IDE0051 // Remove unused private members
     private void Awake()
+#pragma warning restore IDE0051 // Remove unused private members
     {
         // Plugin startup logic
         Logger = base.Logger;
