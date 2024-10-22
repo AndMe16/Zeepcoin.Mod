@@ -115,8 +115,8 @@ public class Coin_NetworkingManager : MonoBehaviour
     {
         string url = $"{baseUrl}/ping";
         if(isFirstCon){
-            MessengerApi.Log("Connecting to the Coin Server");
-            
+            //MessengerApi.Log("Connecting to the Coin Server");
+            Plugin.Logger.LogInfo("Connecting to the Coin Server");
         }
         using (UnityWebRequest webRequest = UnityWebRequest.Get(url))
         {
@@ -136,7 +136,7 @@ public class Coin_NetworkingManager : MonoBehaviour
             else
             {
                 if(isFirstCon){
-                    MessengerApi.LogSuccess("Connected to the Coin Server!");
+                    // MessengerApi.LogSuccess("Connected to the Coin Server!");
                     if (isGlobal)
                     {
                         Coin_ModConfig.LoadConfigValues();
@@ -174,7 +174,7 @@ public class Coin_NetworkingManager : MonoBehaviour
 
     public IEnumerator LoadSinglePlayerPoints(ulong playerId, System.Action<int> onSuccess, System.Action<string> onFailure)
     {
-        Plugin.Logger.LogInfo($"Loading points for player ID: {playerId}");
+        // Plugin.Logger.LogInfo($"Loading points for player ID: {playerId}");
 
         // Define the URL based on whether it's global or host-specific points
         string url = isGlobal 
@@ -217,7 +217,7 @@ public class Coin_NetworkingManager : MonoBehaviour
 
     public IEnumerator SaveSinglePlayerPoints(ulong playerId, uint points)
     {
-        Plugin.Logger.LogInfo($"Saving data for player {playerId} to server");
+        //Plugin.Logger.LogInfo($"Saving data for player {playerId} to server");
         savedData = false;
         // Define the URL based on whether it's global or host-specific points
         string url = isGlobal 
@@ -226,7 +226,7 @@ public class Coin_NetworkingManager : MonoBehaviour
 
         PlayerPointsData data = new PlayerPointsData(playerId, points);
         string jsonData = JsonConvert.SerializeObject(data);
-        Plugin.Logger.LogInfo($"Serialized JSON Data: {jsonData}");
+        //Plugin.Logger.LogInfo($"Serialized JSON Data: {jsonData}");
 
         using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
         {
@@ -254,12 +254,12 @@ public class Coin_NetworkingManager : MonoBehaviour
             if (request.result == UnityWebRequest.Result.Success)
             {
 
-                Plugin.Logger.LogInfo("Points data saved successfully.");
+                Plugin.Logger.LogInfo($"Data points from {playerId} saved successfully.");
                 //MessengerApi.LogSuccess("All player's points saved successfully!");
             }
             else
             {
-                Plugin.Logger.LogError($"Error saving points data: {request.error}");
+                Plugin.Logger.LogError($"Error saving data points from {playerId}: {request.error}");
                 MessengerApi.LogError("Failed saving the points to the server!");
             }
         }
@@ -268,7 +268,7 @@ public class Coin_NetworkingManager : MonoBehaviour
 
     public IEnumerator SavePointsFromDict(Dictionary<ulong, uint> totalPointsDataDictionary)
     {
-        Plugin.Logger.LogInfo("Saving data from dictionary to server");
+        //Plugin.Logger.LogInfo("Saving data from dictionary to server");
         savedData = false;
         // Define the URL based on whether it's global or host-specific points
         string url = isGlobal 
@@ -276,7 +276,7 @@ public class Coin_NetworkingManager : MonoBehaviour
             : $"{baseUrl}/points/host/{SteamClient.SteamId}";
 
         string jsonData = JsonConvert.SerializeObject(totalPointsDataDictionary);
-        Plugin.Logger.LogInfo($"Serialized JSON Data: {jsonData}");
+        //Plugin.Logger.LogInfo($"Serialized JSON Data: {jsonData}");
 
         using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
         {
@@ -304,12 +304,12 @@ public class Coin_NetworkingManager : MonoBehaviour
             if (request.result == UnityWebRequest.Result.Success)
             {
 
-                Plugin.Logger.LogInfo("Data points saved successfully.");
+                Plugin.Logger.LogInfo("Data points from dictionary saved successfully.");
                 //MessengerApi.LogSuccess("All player's points saved successfully!");
             }
             else
             {
-                Plugin.Logger.LogError($"Error saving data points: {request.error}");
+                Plugin.Logger.LogError($"Error saving data points from dictionary: {request.error}");
                 MessengerApi.LogError("Failed saving the points to the server!");
             }
         }
