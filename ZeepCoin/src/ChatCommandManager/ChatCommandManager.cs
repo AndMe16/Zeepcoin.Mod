@@ -1,6 +1,7 @@
 using UnityEngine;
 using ZeepCoin.src;
 using ZeepkistClient;
+using ZeepSDK.Chat;
 using ZeepSDK.ChatCommands;
 
 public class Coin_ChatCommandManager : MonoBehaviour
@@ -247,7 +248,11 @@ public class Coin_ChatCommandManager : MonoBehaviour
 
     private void HandleHeadsTailsCommand(bool isLocal, ulong playerId, string arguments, string command)
     {
-        if (!ZeepkistNetwork.IsMasterClient) return;
+        if (!ZeepkistNetwork.IsMasterClient)
+        {
+            ChatApi.SendMessage($"!{command} {arguments}");
+            return;
+        };
 
         // Get player username
         string username = playerInfoManager.GetPlayerUsername(isLocal, playerId, out playerId);
@@ -307,8 +312,11 @@ public class Coin_ChatCommandManager : MonoBehaviour
     }
     private void OnCoinpointsCommand(bool isLocal, ulong playerId, string arguments)
     {
-        if (!ZeepkistNetwork.IsMasterClient) return;
-
+        if (!ZeepkistNetwork.IsMasterClient)
+        {
+            ChatApi.SendMessage($"!coinpoints");
+            return;
+        }
         // Get player username
         string username = playerInfoManager.GetPlayerUsername(isLocal, playerId, out playerId);
 
