@@ -151,6 +151,8 @@ public class Coin_NetworkingManager : MonoBehaviour
                         onError: (error) =>
                         {
                             Plugin.Logger.LogError($"Failed to get token: {error}");
+                            MessengerApi.LogError("Failed to authenticate to the Coin Server!");
+                            isConnectedToServer = false;
                         }));
             }
             Plugin.Logger.LogInfo("Server is active, response: " + webRequest.downloadHandler.text);
