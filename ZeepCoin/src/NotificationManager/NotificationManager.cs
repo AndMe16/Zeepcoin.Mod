@@ -7,6 +7,16 @@ using ZeepkistClient;
 
 public class Coin_NotificationManager : MonoBehaviour
 {
+    private static void NotifyPlayerVote(ulong targetSteamID, string message)
+    {
+        ZeepkistNetwork.SendCustomChatMessage(sendToEveryone: false, optionalTargetSteamID: targetSteamID, message: message, hostnamePREFERREDCAPS: "COIN");
+    }
+
+    private static void NotifyBroadcast(string message)
+    {
+        ZeepkistNetwork.SendCustomChatMessage(sendToEveryone: true, optionalTargetSteamID: 0, message: "<#FFFFFF>" + message + "</color>", hostnamePREFERREDCAPS: "COIN");
+    }
+
     public void NotifyNotHost()
     {
         ChatApi.AddLocalMessage("<i>You are not host!</i>");
@@ -16,7 +26,7 @@ public class Coin_NotificationManager : MonoBehaviour
     public void NotifyStartingPrediction(float duration)
     {
         ChatApi.AddLocalMessage($"<i>Prediction started for {duration} seconds.</i>");
-        ChatApi.SendMessage("Coin? The prediction has started! Use !heads <points> OR !tails <points> to submit your prediction.");
+        NotifyBroadcast("Coin? The prediction has started! Use <#21B2ED>!heads</color> <#F0F071><points></color> <#FFFFFF>OR</color> <#FD4F06>!tails</color> <#F0F071><points></color> <#FFFFFF>to submit your prediction.</color>");
         Plugin.Logger.LogInfo($"Prediction started for {duration} seconds.");
     }
 
@@ -64,7 +74,7 @@ public class Coin_NotificationManager : MonoBehaviour
 
     public void NotifyStopingPrediction()
     {
-        ChatApi.SendMessage($"The prediction was stoped. All points will be refunded.");
+        NotifyBroadcast($"<#e33434>The prediction was stoped. All points will be refunded.</color>");
         Plugin.Logger.LogInfo("Prediction stoped");
     }
 
@@ -86,60 +96,55 @@ public class Coin_NotificationManager : MonoBehaviour
         ChatApi.AddLocalMessage($"<i>Setting the prediction to {duration} seconds</i>");
     }
 
-    public void NotifyMixedCommandOutsideRound(string username)
+    public void NotifyMixedCommandOutsideRound(ulong targetSteamID, string username)
     {
         Plugin.Logger.LogInfo("Mixed command received outside game state 0");
-        NotifyPlayerVote(username, "you cannot use this command during podium");
+        NotifyPlayerVote(targetSteamID, "<#e33434>You cannot use this command during podium</color>");
     }
 
-    public void NotifyTailsHeadsNoCoin(string username)
+    public void NotifyTailsHeadsNoCoin(ulong targetSteamID, string username)
     {
-        NotifyPlayerVote(username, "wait for the prediction to start");
+        NotifyPlayerVote(targetSteamID, "<#e33434>Wait for the prediction to start</color>");
         Plugin.Logger.LogInfo($"tails/heads command was received without an ongoing prediction");
     }
 
-    public void NotifyTailsHeadsInvalid(string username, string command, string arguments)
+    public void NotifyTailsHeadsInvalid(ulong targetSteamID, string username, string command, string arguments)
     {
-        NotifyPlayerVote(username, $"use a valid amount of points. e.g. !{command} 100");
+        NotifyPlayerVote(targetSteamID, $"<#e33434>Use a valid amount of points.</color> <#67db5e>e.g.</color> !{(command == "heads" ? "<#21B2ED>" : "<#FD4F06>")}{command}</color> <#ffffff>100</color>");
         Plugin.Logger.LogInfo($"Argument of !{command} command is not valid. Arg: {arguments}");
     }
 
-    public void NotifyTailsHeadsChange(string username, string prevCommand, string actCommand)
+    public void NotifyTailsHeadsChange(ulong targetSteamID, string username, string prevCommand, string actCommand)
     {
-        NotifyPlayerVote(username, $"don't change your prediction! Vote only for {prevCommand}");
+        NotifyPlayerVote(targetSteamID, $"<#e33434>Don't change your prediction!</color> <#ffffff>Vote only for</color> {(prevCommand == "heads" ? "<#21B2ED>" : "<#FD4F06>")}{prevCommand}</color>");
         Plugin.Logger.LogInfo($"HandlingPrediction. {username} is trying to change from {prevCommand} to {actCommand}");
     }
 
-    public void NotifyNotEnoughPoints(string username, uint currentPoints, uint pointsSent)
+    public void NotifyNotEnoughPoints(ulong targetSteamID, string username, uint currentPoints, uint pointsSent)
     {
-        NotifyPlayerVote(username, $"not enough points! Remaining: {currentPoints}");
+        NotifyPlayerVote(targetSteamID, $"<#e33434>Not enough points!</color> <#F0F071>Remaining: {currentPoints}</color>");
         Plugin.Logger.LogInfo($"HandlingPrediction. {username} don't have enough points. pointsSent: {pointsSent}. currentPoints: {currentPoints}");
     }
 
-    public void NotifySubmittedPrediction(string username, bool isFirstPrediction)
+    public void NotifySubmittedPrediction(ulong targetSteamID, string username, bool isFirstPrediction, string command, uint points, uint remainingPoints)
     {
         if (isFirstPrediction)
         {
-            NotifyPlayerVote(username, "registered vote");
+            NotifyPlayerVote(targetSteamID, $"<#67db5e>Registered vote</color> -> {(command == "heads" ? "<#21B2ED>" : "<#FD4F06>")}{command}</color> <#ffffff>{points}</color>");
         }
         else
         {
-            NotifyPlayerVote(username, "adding points");
+            NotifyPlayerVote(targetSteamID, $"<#67db5e>Adding</color> <#ffffff>{points}</color> <#67db5e>points to</color> {(command == "heads" ? "<#21B2ED>" : "<#FD4F06>")}{command}</color>");
         }
         Plugin.Logger.LogInfo($"Prediction received from {username}");
     }
 
-    public void NotifyRemainingPoints(string username, uint remainingPoints)
+    public void NotifyRemainingPoints(ulong targetSteamID, string username, uint remainingPoints)
     {
-        NotifyPlayerVote(username, $"remaining points: {remainingPoints}");
+        NotifyPlayerVote(targetSteamID, $"<#717ef0>Remaining points:</color> {remainingPoints}");
         Plugin.Logger.LogInfo($"Showing {username} remaining points: {remainingPoints}");
     }
 
-    private static void NotifyPlayerVote(string username, string message)
-    {
-        string formattedUsername = (username.StartsWith("/") || username.StartsWith("!")) ? " " + username : username;
-        ChatApi.SendMessage($"{formattedUsername}, {message}");
-    }
 
     public void NotifyRefundMissingArguments(string[] arguments)
     {
@@ -167,20 +172,20 @@ public class Coin_NotificationManager : MonoBehaviour
 
     public void NotifyPredictionResults(string result, ulong totalPoints, ulong totalHeadsPoints, ulong totalTailsPoints)
     {
-        ChatApi.SendMessage($":party: It's {result}! :money:{totalPoints} points in total were sent to the winners. Use !coinpoints to check your points.");
+        NotifyBroadcast($":party: It's {(result == "heads" ? "<#21B2ED>" : "<#FD4F06>")}{result}</color><#FFFFFF>! :money:</color><#f0f071>{totalPoints}</color> <#FFFFFF>points in total were sent to the winners. Use</color> <#f0f071>!coinpoints</color> <#FFFFFF>to check your points</color>");
         Plugin.Logger.LogInfo($"Ending Prediction WITH enough points. tails: {totalTailsPoints} heads: {totalHeadsPoints}. result: {result}");
     }
 
     public void NotifyLackPoints(ulong totalHeadsPoints, ulong totalTailsPoints)
     {
-        ChatApi.SendMessage("Prediction ended with not enough predictions, redunding all the points!");
+        NotifyBroadcast("<#e33434>Prediction ended with not enough predictions <br>Refunding all the points!</color>");
         Plugin.Logger.LogInfo($"Ending Prediction with NOT enough points. tails: {totalTailsPoints} heads: {totalHeadsPoints}");
     }
 
     public void NotifyHostLost()
     {
         ChatApi.AddLocalMessage("<i>You lost host during the prediction! Prediction stoped.</i>");
-        ChatApi.SendMessage($" {SteamClient.Name} lost host during the prediction! All the points will be refunded");
+        NotifyBroadcast($" <#e33434>{SteamClient.Name} lost host during the prediction! <br>Refunding all the points!</color>");
         Plugin.Logger.LogInfo("Ending Prediction because of host lost");
     }
 

@@ -269,25 +269,25 @@ public class Coin_ChatCommandManager : MonoBehaviour
         // Check for command outside game round
         if (!(ZeepkistNetwork.CurrentLobby.GameState == 0))
         {
-            notificationManager.NotifyMixedCommandOutsideRound(username);
+            notificationManager.NotifyMixedCommandOutsideRound(playerId, username);
             return;
         }
         // Check for active prediction
         if (!predictionManager.PredictionActive)
         {
-            notificationManager.NotifyTailsHeadsNoCoin(username);
+            notificationManager.NotifyTailsHeadsNoCoin(playerId, username);
             return;
         }
         // Check for a change in the prediction choice
         if (predictionManager.CheckChangePrediction(playerId, command))
         {
-            notificationManager.NotifyTailsHeadsChange(username, command == "heads" ? "tails" : "heads", command);
+            notificationManager.NotifyTailsHeadsChange(playerId, username, command == "heads" ? "tails" : "heads", command);
             return;
         }
         // Try to parse the points from the arguments
         if (!uint.TryParse(arguments, out uint points) || (points <= 0))
         {
-            notificationManager.NotifyTailsHeadsInvalid(username, command, arguments);
+            notificationManager.NotifyTailsHeadsInvalid(playerId, username, command, arguments);
             return;
         }
         // Check remaining points
@@ -297,7 +297,7 @@ public class Coin_ChatCommandManager : MonoBehaviour
             Plugin.Logger.LogInfo($"The player has {remainingPoints} points.");
             if (points > remainingPoints)
             {
-                notificationManager.NotifyNotEnoughPoints(username, remainingPoints, points);
+                notificationManager.NotifyNotEnoughPoints(playerId, username, remainingPoints, points);
                 return;
             }
 
@@ -311,7 +311,7 @@ public class Coin_ChatCommandManager : MonoBehaviour
             {
                 isFirstPrediction = true;
             }
-            notificationManager.NotifySubmittedPrediction(username, isFirstPrediction);
+            notificationManager.NotifySubmittedPrediction(playerId, username, isFirstPrediction, command, points, remainingPoints);
 
             // SubmitPrediction
             predictionManager.SubmitPrediction(playerId, username, command, points, isFirstPrediction, remainingPoints);
@@ -340,7 +340,7 @@ public class Coin_ChatCommandManager : MonoBehaviour
         // Check for command outside game round
         if (!(ZeepkistNetwork.CurrentLobby.GameState == 0))
         {
-            notificationManager.NotifyMixedCommandOutsideRound(username);
+            notificationManager.NotifyMixedCommandOutsideRound(playerId, username);
             return;
         }
         if (!networkingManager.IsConnectedToServer)
@@ -353,7 +353,7 @@ public class Coin_ChatCommandManager : MonoBehaviour
         {
             // Now you have the points after they were fetched (or defaulted in case of error)
             Plugin.Logger.LogInfo($"The player has {remainingPoints} points.");
-            notificationManager.NotifyRemainingPoints(username, remainingPoints);
+            notificationManager.NotifyRemainingPoints(playerId, username, remainingPoints);
         });
 
 
