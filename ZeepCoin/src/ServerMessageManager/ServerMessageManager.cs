@@ -51,7 +51,9 @@ public class Coin_ServerMessageManager : MonoBehaviour
     public void UpdatePredictionServerMessage(uint countdownLeft)
     {
         TimeSpan timeLeft = TimeSpan.FromSeconds(countdownLeft);
-        serverMessage = $"/servermessage white 2 <size=+7><voffset=-9em><align=\"left\"><line-height=0%><pos=3em>Prediction time left: <#F0F071>{timeLeft:hh\\:mm\\:ss}"
+        //serverMessage = $"/servermessage white 2 <size=+7><voffset=-9em><align=\"left\"><line-height=0%><pos=3em>Prediction time left: <#F0F071>{timeLeft:hh\\:mm\\:ss}"
+        //                        + predictionBar;
+        serverMessage = $"/servermessage white 2 <size=+7><align=\"left\"><line-height=0%><pos=3em>Prediction time left: <#F0F071>{timeLeft:hh\\:mm\\:ss}"
                                 + predictionBar;
         ChatApi.SendMessage(serverMessage);
     }

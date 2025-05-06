@@ -3,7 +3,7 @@
     <TargetFramework>net472</TargetFramework>
     <AssemblyName>ZeepCoin</AssemblyName>
     <Product>ZeepCoin</Product>
-    <Version>1.0.5</Version>
+    <Version>1.0.6b</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <RestoreAdditionalProjectSources>

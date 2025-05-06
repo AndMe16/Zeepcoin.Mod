@@ -3,6 +3,7 @@ using UnityEngine;
 using ZeepCoin.src;
 using ZeepSDK.Chat;
 using ZeepSDK.Messaging;
+using ZeepkistClient;
 
 public class Coin_NotificationManager : MonoBehaviour
 {
@@ -105,7 +106,7 @@ public class Coin_NotificationManager : MonoBehaviour
 
     public void NotifyTailsHeadsChange(string username, string prevCommand, string actCommand)
     {
-        NotifyPlayerVote(username, "don't change your prediction!");
+        NotifyPlayerVote(username, $"don't change your prediction! Vote only for {prevCommand}");
         Plugin.Logger.LogInfo($"HandlingPrediction. {username} is trying to change from {prevCommand} to {actCommand}");
     }
 
