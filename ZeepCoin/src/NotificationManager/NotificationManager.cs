@@ -4,6 +4,7 @@ using ZeepCoin.src;
 using ZeepSDK.Chat;
 using ZeepSDK.Messaging;
 using ZeepkistClient;
+using System;
 
 public class Coin_NotificationManager : MonoBehaviour
 {
@@ -141,7 +142,7 @@ public class Coin_NotificationManager : MonoBehaviour
 
     public void NotifyRemainingPoints(ulong targetSteamID, string username, uint remainingPoints)
     {
-        NotifyPlayerVote(targetSteamID, $"<#717ef0>Remaining points:</color> {remainingPoints}");
+        NotifyPlayerVote(targetSteamID, $"Remaining points: <#F0F071>{remainingPoints}</color>");
         Plugin.Logger.LogInfo($"Showing {username} remaining points: {remainingPoints}");
     }
 
@@ -203,5 +204,17 @@ public class Coin_NotificationManager : MonoBehaviour
             Color backgroundColor = new((float)112 / 255, 1, (float)93 / 255, (float)0.7);
             MessengerApi.LogCustomColors($"[ZeepCoin] Using host's specific database ({SteamClient.Name} DB)", textColor, backgroundColor, 2.5f);
         }
+    }
+
+    internal void ListCoinCommands()
+    {
+        ChatApi.AddLocalMessage("<i>Coin commands:</i>" +
+            "<br>/coinstart <#F0F071><duration in seconds></color>" +
+            "<br>/coinstop" +
+            "<br>/coinaddtime <#F0F071><additional seconds></color>" +
+            "<br>/coinsettime <#F0F071><duration in seconds></color>" +
+            "<br>/coinrefund <#F0F071><points> <username></color>" +
+            "<br>!coinpoints");
+        Plugin.Logger.LogInfo("Listing coin commands");
     }
 }

@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.InteropServices.WindowsRuntime;
 using UnityEngine;
 using ZeepCoin.src;
@@ -31,6 +32,7 @@ public class Coin_ChatCommandManager : MonoBehaviour
         ChatCommandApi.RegisterLocalChatCommand("/", "coinaddtime", "<additional seconds>. Add or subtract seconds to the active prediction", OnAddCommandCommand);
         ChatCommandApi.RegisterLocalChatCommand("/", "coinsettime", "<duration in seconds>. Set the remaining duration time of the active prediction", OnSetCommandCommand);
         ChatCommandApi.RegisterLocalChatCommand("/", "coinrefund", "<points> <username>. Refund points to a player", OnCoinRefundCommand);
+        ChatCommandApi.RegisterLocalChatCommand("/", "coinhelp", "List of coin commands", OnCoinhelpCommand);
 
         // Mixed
         ChatCommandApi.RegisterMixedChatCommand("!", "heads", "<points>. Vote for heads using a given amount of points", OnHeadsCommand);
@@ -235,6 +237,12 @@ public class Coin_ChatCommandManager : MonoBehaviour
             pointsManager.SavePlayerPoints(player.SteamID);
         });
 
+    }
+
+
+    private void OnCoinhelpCommand(string arguments)
+    {
+        notificationManager.ListCoinCommands();
     }
 
 
