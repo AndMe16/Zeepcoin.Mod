@@ -240,7 +240,8 @@ public class Coin_NetworkingManager : MonoBehaviour
         }
         else
         {
-            Debug.LogError("No JWT token available!");
+            Plugin.Logger.LogError("No JWT token available!");
+            MessengerApi.LogError("Failed saving the points to the server!");
             savedData = true;
             yield break;
         }
